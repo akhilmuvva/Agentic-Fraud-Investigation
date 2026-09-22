@@ -214,24 +214,7 @@ D:\hakern\
 
 ---
 
-## Hackathon Submission Checklist
 
-- [x] TigerGraph Savanna graph with IEEE-CIS schema and loaded data
-- [x] GSQL queries for all 5 fraud patterns
-- [x] LangGraph agent with 8 nodes (ingest → retrieve → pattern match → RAG → decision → NBA → write → output)
-- [x] Google Gemini LLM for decision reasoning (structured JSON output)
-- [x] text-embedding-004 RAG for similar case retrieval
-- [x] FastAPI backend with `/investigate`, `/cases`, `/cases/{case_id}`, `/health`
-- [x] Streamlit read-only dashboard with Case List + Case Detail views
-- [x] Benchmark runner for all 20 cases with JSON output files
-- [x] SAR auto-filing logic (`sar.json` written when `sar_required=True`)
-- [x] Next-Best-Action before/after evidence comparison
-- [x] `case_written_to_graph` assertion validated in benchmark
-- [x] Complete README with architecture, setup, design decisions
-- [x] All secrets in `.env` (never committed)
-- [x] `requirements.txt` with pinned versions
-
----
 
 > **Hackathon:** TigerGraph 2025 Agentic AI Challenge  
 > **Team:** [Your Team Name]  
