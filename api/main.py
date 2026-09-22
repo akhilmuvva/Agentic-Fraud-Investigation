@@ -6,13 +6,16 @@ Exposes investigation endpoints backed by the LangGraph agent.
 from __future__ import annotations
 
 import asyncio
+import json
 import logging
 from datetime import datetime, timezone
 from functools import partial
+from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import HTMLResponse, JSONResponse
 from pydantic import BaseModel, Field
 
 # ---------------------------------------------------------------------------
@@ -47,9 +50,20 @@ app.add_middleware(
 )
 
 # ---------------------------------------------------------------------------
-# In-memory store
+# In-memory store & Disk Preloader
 # ---------------------------------------------------------------------------
 cases_store: Dict[str, Dict[str, Any]] = {}
+
+CASES_DIR = Path(__file__).resolve().parent.parent / "cases"
+if CASES_DIR.exists():
+    for case_file in sorted(CASES_DIR.glob("HHG-*.json")):
+        try:
+            with open(case_file, "r", encoding="utf-8") as f:
+                cdata = json.load(f)
+                cases_store[cdata["case_id"]] = cdata
+        except Exception as e:
+            logger.warning("Could not pre-load %s: %s", case_file, e)
+    logger.info("Pre-loaded %d cases from %s into cases_store", len(cases_store), CASES_DIR)
 
 # ---------------------------------------------------------------------------
 # Request / Response schemas
@@ -115,6 +129,17 @@ def _build_summary(case_id: str, state: Dict[str, Any]) -> Dict[str, Any]:
 # ---------------------------------------------------------------------------
 
 
+@app.get("/", response_class=HTMLResponse, tags=["UI"])
+@app.get("/ui", response_class=HTMLResponse, tags=["UI"])
+async def serve_ui() -> HTMLResponse:
+    """Serve the modern Agentic Fraud Investigation frontend dashboard."""
+    ui_path = Path(__file__).resolve().parent.parent / "ui" / "index.html"
+    if ui_path.exists():
+        with open(ui_path, "r", encoding="utf-8") as f:
+            return HTMLResponse(content=f.read())
+    return HTMLResponse(content="<h1>Agentic Fraud Investigation UI</h1>")
+
+
 @app.get("/health", response_model=HealthResponse, tags=["Meta"])
 async def health_check() -> HealthResponse:
     """Simple liveness probe."""
@@ -122,6 +147,12 @@ async def health_check() -> HealthResponse:
         status="ok",
         timestamp=datetime.now(timezone.utc).isoformat(),
     )
+
+
+@app.get("/api/full-cases", tags=["Cases"])
+async def list_full_cases() -> List[Dict[str, Any]]:
+    """Return all complete case objects including evidence, NBAs, and SARs."""
+    return list(cases_store.values())
 
 
 @app.post("/investigate", response_model=InvestigateResponse, tags=["Investigation"])

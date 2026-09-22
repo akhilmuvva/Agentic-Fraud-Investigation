@@ -1,10 +1,10 @@
 {
   "case_id": "HHG-018",
   "case": {
-    "status": "escalated",
-    "verdict": "uncertain",
-    "fraud_probability": 0.5,
-    "pattern": "none",
+    "status": "closed_fraud",
+    "verdict": "fraud",
+    "fraud_probability": 0.79,
+    "pattern": "card_not_present_fraud",
     "pattern_description": "",
     "affected_txn_ids": [
       "3491361"
@@ -14,7 +14,7 @@
       "C02354-K2"
     ],
     "connected_device_profiles": [
-      "Web-Browser-Profile"
+      "iOS 10.3 | Mobile Safari"
     ],
     "exposure_usd": 39.08,
     "evidence": [
@@ -104,7 +104,7 @@
       "CC-0002",
       "CC-0003"
     ],
-    "summary": "Investigation case HHG-018 was triggered by a customer_report event on transaction 3491361. Initial risk score was 0.00. The following fraud patterns were matched: card_not_present_fraud, card_not_present_new_device, out_of_region_use, card_testing. Final confidence: 0.50. Recommended actions: CREATE_CASE, VERIFY_WITH_CUSTOMER, ESCALATE. Estimated exposure: $39.08. SAR required: False. Human approval required: True.",
+    "summary": "Investigation case HHG-018 was evaluated against IEEE-CIS financial graph topology. Detected pattern: card not present fraud. Final confidence: 0.79. Status: closed_fraud. Case recorded in TigerGraph.",
     "written_to_graph": true,
     "graph_case_id": "HHG-018"
   },
@@ -120,32 +120,27 @@
       {
         "action": "CREATE_CASE",
         "route": "auto",
-        "reason": "Policy baseline"
+        "reason": "Policy R1"
       },
       {
         "action": "VERIFY_WITH_CUSTOMER",
         "route": "auto",
-        "reason": "R1: verify before blocking on single signal"
+        "reason": "Policy R1"
       }
     ],
     "final": [
       {
+        "action": "BLOCK_CARD",
+        "route": "L1",
+        "reason": "Policy R2"
+      },
+      {
         "action": "CREATE_CASE",
         "route": "auto",
-        "reason": "R1: threshold review"
-      },
-      {
-        "action": "VERIFY_WITH_CUSTOMER",
-        "route": "auto",
-        "reason": "R2: filing report"
-      },
-      {
-        "action": "ESCALATE",
-        "route": "auto",
-        "reason": "R2: filing report"
+        "reason": "Policy R2"
       }
     ],
-    "what_changed": "Evidence collection and pattern analysis confirmed the fraud risk, updating recommended actions and approval routes."
+    "what_changed": "Dispute confirmed; card blocked."
   },
   "sar": {
     "file": false,

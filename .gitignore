@@ -8,4 +8,5 @@ output/
 *.log
 scratch/
 data/*.csv
+*.exe
 

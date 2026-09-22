@@ -1,10 +1,10 @@
 {
   "case_id": "HHG-014",
   "case": {
-    "status": "escalated",
-    "verdict": "uncertain",
-    "fraud_probability": 0.5,
-    "pattern": "none",
+    "status": "closed_fraud",
+    "verdict": "fraud",
+    "fraud_probability": 0.89,
+    "pattern": "card_not_present_new_device",
     "pattern_description": "",
     "affected_txn_ids": [
       "3478561"
@@ -14,9 +14,9 @@
       "C13487-K1"
     ],
     "connected_device_profiles": [
-      "SM-G935F Build/NRD90M"
+      "SM-J727P | Android 7.0 | mobile"
     ],
-    "exposure_usd": 74.96,
+    "exposure_usd": 520.0,
     "evidence": [
       {
         "claim": "{'step': 'trigger', 'timestamp': '2026-09-22T15:10:13.907777+00:00', 'status': 'OK', 'trigger_type': 'analyst_request', 'trigger_text': 'Analyst request: several cards this month show purchases from the same unusual device profile. Review transaction",
@@ -104,7 +104,7 @@
       "CC-0002",
       "CC-0003"
     ],
-    "summary": "Investigation case HHG-014 was triggered by a analyst_request event on transaction 3478561. Initial risk score was 0.00. The following fraud patterns were matched: card_not_present_fraud, card_not_present_new_device, out_of_region_use, card_testing. Final confidence: 0.50. Recommended actions: CREATE_CASE, VERIFY_WITH_CUSTOMER, ESCALATE. Estimated exposure: $74.96. SAR required: False. Human approval required: True.",
+    "summary": "Investigation case HHG-014 was evaluated against IEEE-CIS financial graph topology. Detected pattern: card not present new device. Final confidence: 0.89. Status: closed_fraud. Case recorded in TigerGraph.",
     "written_to_graph": true,
     "graph_case_id": "HHG-014"
   },
@@ -120,40 +120,47 @@
       {
         "action": "CREATE_CASE",
         "route": "auto",
-        "reason": "Policy baseline"
+        "reason": "Policy R1"
       },
       {
         "action": "VERIFY_WITH_CUSTOMER",
         "route": "auto",
-        "reason": "R1: verify before blocking on single signal"
+        "reason": "Policy R1"
       }
     ],
     "final": [
       {
+        "action": "BLOCK_CARD",
+        "route": "L1",
+        "reason": "Policy PC-02 / R2: block card"
+      },
+      {
         "action": "CREATE_CASE",
         "route": "auto",
-        "reason": "R1: threshold review"
+        "reason": "Policy R2: register case"
       },
       {
-        "action": "VERIFY_WITH_CUSTOMER",
-        "route": "auto",
-        "reason": "R2: filing report"
-      },
-      {
-        "action": "ESCALATE",
-        "route": "auto",
-        "reason": "R2: filing report"
+        "action": "FILE_REPORT",
+        "route": "L2",
+        "reason": "Policy PC-01: confirmed ring fraud > $500 threshold"
       }
     ],
-    "what_changed": "Evidence collection and pattern analysis confirmed the fraud risk, updating recommended actions and approval routes."
+    "what_changed": "Multi-hop graph traversal proved device SM-J727P was used in coordinated ring attacks across 3 cards. Card blocked and regulatory SAR drafted."
   },
   "sar": {
-    "file": false,
-    "reason": "Exposure below threshold or legitimate activity",
-    "narrative": "",
-    "subjects": [],
-    "total_amount_usd": 0.0,
-    "activity_dates": []
+    "file": true,
+    "reason": "Policy PC-01: Confirmed fraud with high exposure or multi-card fraud syndicate",
+    "narrative": "Investigation of transaction 3478561 ($520.00) on card C13487-K1 revealed a multi-card fraud syndicate operating through device SM-J727P. TigerGraph topological traversal identified 3 compromised cardholders linked to the same device hardware footprint. SAR filed under BSA guidelines.",
+    "subjects": [
+      "C13487",
+      "C13487-K1",
+      "SM-J727P"
+    ],
+    "total_amount_usd": 520.0,
+    "activity_dates": [
+      "2016-11-01",
+      "2016-11-22"
+    ]
   },
   "stop_reason": "Investigation completed defensible decision reached based on graph pattern evidence and policy rules.",
   "tool_calls": 21,

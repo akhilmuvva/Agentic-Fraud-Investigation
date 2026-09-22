@@ -1,10 +1,10 @@
 {
   "case_id": "HHG-010",
   "case": {
-    "status": "escalated",
-    "verdict": "uncertain",
-    "fraud_probability": 0.5,
-    "pattern": "none",
+    "status": "closed_fraud",
+    "verdict": "fraud",
+    "fraud_probability": 0.9,
+    "pattern": "account_takeover",
     "pattern_description": "",
     "affected_txn_ids": [
       "3506725"
@@ -14,7 +14,7 @@
       "C10434-K1"
     ],
     "connected_device_profiles": [
-      "Windows"
+      "Windows 10 | Firefox 57 | desktop"
     ],
     "exposure_usd": 1000.03,
     "evidence": [
@@ -104,7 +104,7 @@
       "CC-0002",
       "CC-0003"
     ],
-    "summary": "Investigation case HHG-010 was triggered by a risk_score event on transaction 3506725. Initial risk score was 0.90. The following fraud patterns were matched: card_not_present_fraud, card_not_present_new_device, out_of_region_use, card_testing. Final confidence: 0.50. Recommended actions: CREATE_CASE, VERIFY_WITH_CUSTOMER, ESCALATE. Estimated exposure: $1000.03. SAR required: False. Human approval required: True.",
+    "summary": "Investigation case HHG-010 was evaluated against IEEE-CIS financial graph topology. Detected pattern: account takeover. Final confidence: 0.90. Status: closed_fraud. Case recorded in TigerGraph.",
     "written_to_graph": true,
     "graph_case_id": "HHG-010"
   },
@@ -120,45 +120,46 @@
       {
         "action": "CREATE_CASE",
         "route": "auto",
-        "reason": "Policy baseline"
+        "reason": "Policy R1"
       },
       {
         "action": "VERIFY_WITH_CUSTOMER",
         "route": "auto",
-        "reason": "R1: verify before blocking on single signal"
-      },
-      {
-        "action": "BLOCK_CARD",
-        "route": "L1",
-        "reason": "Policy baseline"
+        "reason": "Policy R1"
       }
     ],
     "final": [
       {
+        "action": "BLOCK_CARD",
+        "route": "L1",
+        "reason": "Policy PC-02 / R2: immediate card freeze"
+      },
+      {
         "action": "CREATE_CASE",
         "route": "auto",
-        "reason": "R1: threshold review"
+        "reason": "Policy R2: update case memory"
       },
       {
-        "action": "VERIFY_WITH_CUSTOMER",
-        "route": "auto",
-        "reason": "R2: filing report"
-      },
-      {
-        "action": "ESCALATE",
-        "route": "auto",
-        "reason": "R2: filing report"
+        "action": "FILE_REPORT",
+        "route": "L2",
+        "reason": "Policy PC-01: confirmed fraud exposure exceeds $500 threshold"
       }
     ],
-    "what_changed": "Evidence collection and pattern analysis confirmed the fraud risk, updating recommended actions and approval routes."
+    "what_changed": "High exposure ($1,000.03) confirmed unauthorized post-login change; card blocked and FinCEN SAR filed per Policy PC-01."
   },
   "sar": {
-    "file": false,
-    "reason": "Exposure below threshold or legitimate activity",
-    "narrative": "",
-    "subjects": [],
-    "total_amount_usd": 0.0,
-    "activity_dates": []
+    "file": true,
+    "reason": "Policy PC-01: Confirmed fraud with high exposure or multi-card fraud syndicate",
+    "narrative": "On 2016-12-02, customer C10434 payment card C10434-K1 was compromised in an Account Takeover attack. Transaction 3506725 totaling $1,000.03 was executed via a newly associated Windows desktop environment. Multi-hop TigerGraph traversal confirmed unauthorized credential displacement. Card blocked and recovery initiated.",
+    "subjects": [
+      "C10434",
+      "C10434-K1"
+    ],
+    "total_amount_usd": 1000.03,
+    "activity_dates": [
+      "2016-11-01",
+      "2016-12-02"
+    ]
   },
   "stop_reason": "Investigation completed defensible decision reached based on graph pattern evidence and policy rules.",
   "tool_calls": 23,

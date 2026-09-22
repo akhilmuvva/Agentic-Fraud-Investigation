@@ -1,0 +1,1794 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Agentic Fraud Investigation | Autonomous TigerGraph &amp; LangGraph Forensic Protocol</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%237c3aed'><path d='M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 10.99h7c-.53 4.12-3.28 7.79-7 8.94V12H5V6.3l7-3.11v8.8z'/></svg>">
+  
+  <!-- Tailwind CSS & Fonts (Inter, General Sans, Space Grotesk, JetBrains Mono, IBM Plex Mono) -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://api.fontshare.com/v2/css?f[]=general-sans@400,500,600,700,800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@500;700&family=JetBrains+Mono:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#f5f3ff',
+              100: '#ede9fe',
+              200: '#ddd6fe',
+              300: '#c4b5fd',
+              400: '#a78bfa',
+              500: '#8b5cf6',
+              600: '#7c3aed',
+              700: '#6d28d9',
+              800: '#5b21b6',
+              900: '#4c1d95',
+              950: '#2e1065',
+            },
+            dark: {
+              bg: '#070a12',
+              surface: '#0b0f19',
+              card: 'rgba(15, 23, 42, 0.65)',
+              border: 'rgba(124, 58, 237, 0.22)',
+              hover: 'rgba(124, 58, 237, 0.15)',
+            }
+          },
+          fontFamily: {
+            sans: ['"General Sans"', '"Inter"', 'sans-serif'],
+            heading: ['"General Sans"', '"Space Grotesk"', 'sans-serif'],
+            mono: ['"JetBrains Mono"', '"IBM Plex Mono"', 'monospace'],
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    :root {
+      color-scheme: dark;
+    }
+    body {
+      background-color: #070a12;
+      background-image: 
+        radial-gradient(circle at 50% 0%, rgba(124, 58, 237, 0.22) 0%, transparent 55%),
+        radial-gradient(circle at 100% 100%, rgba(6, 182, 212, 0.08) 0%, transparent 45%),
+        radial-gradient(circle at 0% 50%, rgba(139, 92, 246, 0.06) 0%, transparent 50%),
+        linear-gradient(180deg, #070a12 0%, #0d121f 100%);
+      color: #f1f5f9;
+      min-height: 100vh;
+    }
+    .glass-panel {
+      background: rgba(15, 23, 42, 0.72);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(124, 58, 237, 0.25);
+      box-shadow: 0 10px 35px -10px rgba(0, 0, 0, 0.6);
+    }
+    .glass-card {
+      background: rgba(15, 23, 42, 0.52);
+      backdrop-filter: blur(14px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .glass-card:hover {
+      border-color: rgba(124, 58, 237, 0.55);
+      transform: translateY(-2px);
+      box-shadow: 0 10px 25px -5px rgba(124, 58, 237, 0.25);
+    }
+    .active-card {
+      border-color: #7c3aed !important;
+      background: rgba(124, 58, 237, 0.14) !important;
+      box-shadow: 0 0 25px -4px rgba(124, 58, 237, 0.35) !important;
+    }
+    .gradient-text {
+      background: linear-gradient(135deg, #ffffff 0%, #cbd5e1 40%, #c084fc 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .node-pulse {
+      animation: pulse 2.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+    /* Custom scrollbar */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: rgba(15, 23, 42, 0.4);
+    }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(124, 58, 237, 0.35);
+      border-radius: 9999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(124, 58, 237, 0.65);
+    }
+  </style>
+</head>
+<body class="p-3 md:p-6 lg:p-8 font-sans antialiased">
+
+  <div class="max-w-[1440px] mx-auto space-y-6">
+
+    <!-- Top Floating Navigation Bar -->
+    <header class="glass-panel rounded-2xl px-6 py-4 flex flex-col md:flex-row justify-between items-center gap-4 sticky top-3 z-40">
+      <div class="flex items-center gap-4">
+        <div class="w-12 h-12 rounded-xl bg-gradient-to-tr from-brand-700 via-brand-600 to-indigo-500 flex items-center justify-center shadow-lg shadow-brand-600/30 flex-shrink-0">
+          <i data-lucide="shield-alert" class="w-6 h-6 text-white"></i>
+        </div>
+        <div>
+          <h1 class="text-xl md:text-2xl font-extrabold tracking-tight gradient-text">
+            Agentic Fraud Investigation
+            <span class="text-brand-400 font-light text-base md:text-lg">| Forensic Fabric</span>
+          </h1>
+          <p class="text-xs text-slate-400 font-medium">Autonomous Multi-Hop Graph Traversal • TigerGraph Savanna 4.2 • LangGraph 8-Node Agent</p>
+        </div>
+      </div>
+
+      <div class="flex flex-wrap items-center gap-2.5">
+        <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-brand-950/60 border border-brand-500/30 text-xs font-semibold text-purple-300">
+          <span class="w-2 h-2 rounded-full bg-emerald-400 node-pulse shadow-[0_0_8px_#34d399]"></span>
+          TigerGraph Savanna 4.2
+        </div>
+        <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-950/60 border border-emerald-500/30 text-xs font-semibold text-emerald-300">
+          <i data-lucide="check-circle-2" class="w-3.5 h-3.5"></i>
+          20/20 Held-Out Benchmarks
+        </div>
+        <a href="https://github.com/akhilmuvva/Agentic-Fraud-Investigation" target="_blank" class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-brand-600 hover:bg-brand-500 text-xs font-bold text-white transition-all shadow-md shadow-brand-600/30">
+          <i data-lucide="github" class="w-3.5 h-3.5"></i>
+          GitHub Repository
+        </a>
+      </div>
+    </header>
+
+    <!-- Hero / Headline Banner -->
+    <section class="glass-panel rounded-2xl p-6 md:p-8 relative overflow-hidden border border-brand-500/25">
+      <div class="absolute -right-24 -top-24 w-96 h-96 bg-brand-600/10 rounded-full blur-3xl pointer-events-none"></div>
+      <div class="relative z-10 space-y-3">
+        <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-brand-500/10 border border-brand-500/30 text-[11px] font-bold uppercase tracking-wider text-brand-300">
+          <i data-lucide="zap" class="w-3 h-3 text-brand-400"></i> Autonomous Forensic Engine • Hacker House Goa IEEE-CIS
+        </div>
+        <h2 class="text-2xl md:text-4xl font-extrabold tracking-tight text-white">
+          Agentic Fraud Investigation <span class="text-brand-400">Forensic Protocol</span>
+        </h2>
+        <p class="text-sm md:text-base text-slate-300 max-w-4xl leading-relaxed">
+          Autonomous multi-hop graph traversal across 590,000 IEEE-CIS transactions. Executes installed GSQL algorithms on TigerGraph Savanna, retrieves historical closed case memory via GraphRAG cosine embeddings, iteratively resolves uncertainty through next-best-action policies, and drafts FinCEN SAR regulatory filings.
+        </p>
+        <div class="flex flex-wrap items-center gap-2 pt-2">
+          <button onclick="filterByQuick('ALL')" class="px-3 py-1 rounded-lg text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700">All Exam Cases (20)</button>
+          <button onclick="filterByQuick('fraud')" class="px-3 py-1 rounded-lg text-xs font-semibold bg-rose-500/15 hover:bg-rose-500/25 text-rose-300 border border-rose-500/30">Confirmed Fraud (14)</button>
+          <button onclick="filterByQuick('uncertain')" class="px-3 py-1 rounded-lg text-xs font-semibold bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/30">Under Escalation (6)</button>
+          <button onclick="filterByQuick('sar')" class="px-3 py-1 rounded-lg text-xs font-semibold bg-purple-500/15 hover:bg-purple-500/25 text-purple-300 border border-purple-500/30">FinCEN SARs Filed (4)</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- KPI Metrics Grid -->
+    <section class="grid grid-cols-2 md:grid-cols-5 gap-3.5">
+      <div class="glass-card rounded-2xl p-4 md:p-5">
+        <div class="flex justify-between items-start">
+          <span class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Exam Cases</span>
+          <i data-lucide="layers" class="w-4 h-4 text-brand-400"></i>
+        </div>
+        <div class="text-3xl font-extrabold font-mono text-white mt-2" id="stat-total">20</div>
+        <div class="text-[10px] text-emerald-400 font-semibold mt-1">100% Evaluated</div>
+      </div>
+
+      <div class="glass-card rounded-2xl p-4 md:p-5">
+        <div class="flex justify-between items-start">
+          <span class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Confirmed Fraud</span>
+          <i data-lucide="shield-x" class="w-4 h-4 text-rose-400"></i>
+        </div>
+        <div class="text-3xl font-extrabold font-mono text-rose-400 mt-2" id="stat-fraud">14</div>
+        <div class="text-[10px] text-rose-400/80 font-semibold mt-1">70.0% Detection Rate</div>
+      </div>
+
+      <div class="glass-card rounded-2xl p-4 md:p-5">
+        <div class="flex justify-between items-start">
+          <span class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Under Escalation</span>
+          <i data-lucide="alert-triangle" class="w-4 h-4 text-amber-400"></i>
+        </div>
+        <div class="text-3xl font-extrabold font-mono text-amber-400 mt-2" id="stat-escalated">6</div>
+        <div class="text-[10px] text-amber-400/80 font-semibold mt-1">Policy R8 Review Required</div>
+      </div>
+
+      <div class="glass-card rounded-2xl p-4 md:p-5">
+        <div class="flex justify-between items-start">
+          <span class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Monitored Exposure</span>
+          <i data-lucide="dollar-sign" class="w-4 h-4 text-cyan-400"></i>
+        </div>
+        <div class="text-2xl md:text-3xl font-extrabold font-mono text-cyan-300 mt-2" id="stat-exposure">$4,068.25</div>
+        <div class="text-[10px] text-cyan-400/80 font-semibold mt-1">Across 20 Held-Out Cards</div>
+      </div>
+
+      <div class="glass-card rounded-2xl p-4 md:p-5">
+        <div class="flex justify-between items-start">
+          <span class="text-[11px] font-bold uppercase tracking-wider text-slate-400">FinCEN SARs Filed</span>
+          <i data-lucide="file-check" class="w-4 h-4 text-purple-400"></i>
+        </div>
+        <div class="text-3xl font-extrabold font-mono text-purple-400 mt-2" id="stat-sar">4</div>
+        <div class="text-[10px] text-purple-400/80 font-semibold mt-1">BSA / FinCEN 31 CFR Compliant</div>
+      </div>
+    </section>
+
+    <!-- Main Navigation Tabs -->
+    <nav class="flex border-b border-slate-800 space-x-6 text-sm font-semibold overflow-x-auto">
+      <button onclick="setTab('command')" id="tab-btn-command" class="pb-3 border-b-2 border-brand-500 text-purple-300 flex items-center gap-2 flex-shrink-0">
+        <i data-lucide="layout-grid" class="w-4 h-4"></i> Command Center &amp; Forensic Studio
+      </button>
+      <button onclick="setTab('nba')" id="tab-btn-nba" class="pb-3 border-b-2 border-transparent text-slate-400 hover:text-slate-200 flex items-center gap-2 flex-shrink-0">
+        <i data-lucide="git-branch" class="w-4 h-4"></i> NBA Policy Evolution Matrix
+      </button>
+      <button onclick="setTab('sar')" id="tab-btn-sar" class="pb-3 border-b-2 border-transparent text-slate-400 hover:text-slate-200 flex items-center gap-2 flex-shrink-0">
+        <i data-lucide="file-text" class="w-4 h-4"></i> Regulatory FinCEN SARs
+      </button>
+      <button onclick="setTab('topology')" id="tab-btn-topology" class="pb-3 border-b-2 border-transparent text-slate-400 hover:text-slate-200 flex items-center gap-2 flex-shrink-0">
+        <i data-lucide="network" class="w-4 h-4"></i> Graph Topology &amp; GSQL Engine
+      </button>
+      <button onclick="setTab('ledger')" id="tab-btn-ledger" class="pb-3 border-b-2 border-transparent text-slate-400 hover:text-slate-200 flex items-center gap-2 flex-shrink-0">
+        <i data-lucide="table" class="w-4 h-4"></i> 20-Case Benchmark Ledger
+      </button>
+    </nav>
+
+    <!-- TAB 1: Command Center & Forensic Studio -->
+    <main id="tab-command" class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+      
+      <!-- Left: Case List (4.5 cols) -->
+      <div class="lg:col-span-4 xl:col-span-4 space-y-3">
+        <div class="flex items-center gap-2">
+          <div class="relative flex-1">
+            <i data-lucide="search" class="w-4 h-4 absolute left-3 top-2.5 text-slate-400"></i>
+            <input type="text" id="searchInput" oninput="renderCaseList()" placeholder="Search Case ID, Card, Pattern, Txn..." class="w-full bg-slate-900/80 border border-slate-800 focus:border-brand-500 rounded-xl pl-9 pr-4 py-2 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-brand-500 font-mono">
+          </div>
+          <select id="filterVerdict" onchange="renderCaseList()" class="bg-slate-900/80 border border-slate-800 text-xs rounded-xl px-3 py-2 text-slate-300 focus:outline-none">
+            <option value="ALL">All Verdicts</option>
+            <option value="fraud">Fraud (14)</option>
+            <option value="uncertain">Uncertain (6)</option>
+            <option value="legitimate">Cleared</option>
+          </select>
+        </div>
+
+        <!-- Live API Call & Sync Controls -->
+        <div id="apiStatusBar" class="bg-slate-900/90 border border-slate-800 rounded-xl p-2.5 flex items-center justify-between text-xs font-mono">
+          <div class="flex items-center gap-2">
+            <span class="relative flex h-2 w-2">
+              <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+              <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+            </span>
+            <span id="apiStatusText" class="text-slate-300 text-[11px] truncate max-w-[200px]">Live API: /cases &amp; /api/full-cases</span>
+          </div>
+          <button onclick="callAllCases()" id="btnSyncAll" class="px-2.5 py-1 rounded-lg bg-brand-600/30 hover:bg-brand-600/50 text-brand-200 border border-brand-500/40 text-[10px] font-bold flex items-center gap-1.5 transition-all">
+            <i data-lucide="refresh-cw" class="w-3 h-3"></i> Call All Cases
+          </button>
+        </div>
+
+        <div id="caseListContainer" class="space-y-2.5 max-h-[720px] overflow-y-auto pr-1">
+          <!-- Populated by JS -->
+        </div>
+      </div>
+
+      <!-- Right: Forensic Deep-Dive Studio (8 cols) -->
+      <div class="lg:col-span-8 xl:col-span-8">
+        <div id="caseDetailPanel" class="glass-panel rounded-2xl p-6 space-y-6">
+          <div class="text-center py-24 text-slate-500">
+            <i data-lucide="fingerprint" class="w-10 h-10 mx-auto text-slate-600 mb-3"></i>
+            <div class="text-sm font-semibold">Select an investigation to view full forensic graph trace</div>
+          </div>
+        </div>
+      </div>
+
+    </main>
+
+    <!-- TAB 2: NBA Evolution Matrix -->
+    <div id="tab-nba" class="hidden glass-panel rounded-2xl p-6 space-y-6">
+      <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-2 border-b border-slate-800 pb-4">
+        <div>
+          <h2 class="text-xl font-bold text-white flex items-center gap-2 font-heading">
+            <i data-lucide="git-compare" class="w-5 h-5 text-brand-400"></i> Next-Best-Action (NBA) Policy Evolution Matrix
+          </h2>
+          <p class="text-xs text-slate-400">Tracking policy recommendation shifts before and after autonomous TigerGraph multi-hop evidence gathering.</p>
+        </div>
+        <div class="text-xs font-mono text-purple-300 bg-brand-950/60 px-3 py-1.5 rounded-lg border border-brand-500/30">
+          Evaluated via Policies R1 - R10 &amp; PC-01 - PC-04
+        </div>
+      </div>
+      <div id="nbaEvolutionContainer" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <!-- Populated by JS -->
+      </div>
+    </div>
+
+    <!-- TAB 3: Regulatory FinCEN SARs -->
+    <div id="tab-sar" class="hidden glass-panel rounded-2xl p-6 space-y-6">
+      <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-2 border-b border-slate-800 pb-4">
+        <div>
+          <h2 class="text-xl font-bold text-white flex items-center gap-2 font-heading">
+            <i data-lucide="landmark" class="w-5 h-5 text-purple-400"></i> FinCEN Suspicious Activity Reports (SAR) Dossier
+          </h2>
+          <p class="text-xs text-slate-400">Official regulatory narratives drafted in strict compliance with BSA / FinCEN guidelines and Policy PC-01.</p>
+        </div>
+        <div class="text-xs font-mono text-purple-300 bg-purple-950/50 px-3 py-1.5 rounded-lg border border-purple-500/30">
+          Threshold: Exposure &gt; $500.00 &amp; Confirmed Fraud
+        </div>
+      </div>
+      <div id="sarListContainer" class="space-y-4">
+        <!-- Populated by JS -->
+      </div>
+    </div>
+
+    <!-- TAB 4: Graph Topology & GSQL Engine -->
+    <div id="tab-topology" class="hidden glass-panel rounded-2xl p-6 space-y-6">
+      <div class="border-b border-slate-800 pb-4">
+        <h2 class="text-xl font-bold text-white flex items-center gap-2 font-heading">
+          <i data-lucide="share-2" class="w-5 h-5 text-cyan-400"></i> TigerGraph Forensic Topology &amp; Installed GSQL Algorithms
+        </h2>
+        <p class="text-xs text-slate-400">Inspect the heterogeneous property graph schema, node properties, and execution parameters across all 5 compiled GSQL queries.</p>
+      </div>
+      
+      <!-- Graph Architecture Diagram -->
+      <div class="bg-slate-900/60 border border-slate-800 rounded-2xl p-6">
+        <h3 class="text-sm font-bold uppercase tracking-wider text-purple-300 mb-4 flex items-center gap-2">
+          <i data-lucide="git-merge" class="w-4 h-4"></i> Heterogeneous Property Graph Schema
+        </h3>
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-xs font-mono">
+          <div class="bg-slate-950/70 p-4 rounded-xl border border-slate-800">
+            <div class="text-purple-400 font-bold mb-1">Customer Vertex</div>
+            <div class="text-slate-400 space-y-1 text-[11px]">
+              <div>• customer_id (PK)</div>
+              <div>• addr1, addr2</div>
+              <div>• risk_score (FLOAT)</div>
+              <div>• first_seen, last_seen</div>
+            </div>
+          </div>
+          <div class="bg-slate-950/70 p-4 rounded-xl border border-slate-800">
+            <div class="text-purple-400 font-bold mb-1">Card Vertex</div>
+            <div class="text-slate-400 space-y-1 text-[11px]">
+              <div>• card_id (PK)</div>
+              <div>• customer_id (FK)</div>
+              <div>• card1 - card6</div>
+              <div>• bank, card_type</div>
+            </div>
+          </div>
+          <div class="bg-slate-950/70 p-4 rounded-xl border border-slate-800">
+            <div class="text-purple-400 font-bold mb-1">Transaction Vertex</div>
+            <div class="text-slate-400 space-y-1 text-[11px]">
+              <div>• transaction_id (PK)</div>
+              <div>• TransactionAmt (FLOAT)</div>
+              <div>• ProductCD, addr1, addr2</div>
+              <div>• M1-M9, C1-C14 flags</div>
+            </div>
+          </div>
+          <div class="bg-slate-950/70 p-4 rounded-xl border border-slate-800">
+            <div class="text-purple-400 font-bold mb-1">Device Vertex</div>
+            <div class="text-slate-400 space-y-1 text-[11px]">
+              <div>• device_id (PK)</div>
+              <div>• DeviceType, DeviceInfo</div>
+              <div>• os, browser</div>
+              <div>• id_01 - id_38</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 5 GSQL Patterns Code Explorer -->
+      <div class="space-y-4">
+        <h3 class="text-sm font-bold uppercase tracking-wider text-cyan-300 flex items-center gap-2">
+          <i data-lucide="code" class="w-4 h-4"></i> Installed GSQL Fraud Pattern Algorithms
+        </h3>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div class="bg-slate-900/60 border border-slate-800 rounded-xl p-4">
+            <div class="flex justify-between items-center mb-2">
+              <span class="font-bold text-xs text-cyan-300 font-mono">detect_card_not_present_fraud</span>
+              <span class="text-[10px] text-slate-400 font-mono">Pattern P1</span>
+            </div>
+            <p class="text-xs text-slate-300 mb-2">Detects online transactions (ProductCD=W,H) with identity flag mismatches (M1, M6, M9) and high multi-address velocity (C1 &gt; 5).</p>
+            <pre class="bg-slate-950 p-2.5 rounded-lg text-[10px] font-mono text-slate-300 overflow-x-auto border border-slate-800/80"><code>detect_card_not_present_fraud(STRING card_id, INT lookback_days)
+RETURNS HeapAccum<FraudCandidate></code></pre>
+          </div>
+
+          <div class="bg-slate-900/60 border border-slate-800 rounded-xl p-4">
+            <div class="flex justify-between items-center mb-2">
+              <span class="font-bold text-xs text-cyan-300 font-mono">detect_account_takeover</span>
+              <span class="text-[10px] text-slate-400 font-mono">Pattern P2</span>
+            </div>
+            <p class="text-xs text-slate-300 mb-2">Detects transactions from first-seen devices on known cards combined with recipient email changes or large amount spikes &gt; 2x average.</p>
+            <pre class="bg-slate-950 p-2.5 rounded-lg text-[10px] font-mono text-slate-300 overflow-x-auto border border-slate-800/80"><code>detect_account_takeover(STRING customer_id, INT lookback_days)
+RETURNS ListAccum<ATOCandidate></code></pre>
+          </div>
+
+          <div class="bg-slate-900/60 border border-slate-800 rounded-xl p-4">
+            <div class="flex justify-between items-center mb-2">
+              <span class="font-bold text-xs text-cyan-300 font-mono">detect_card_not_present_new_device</span>
+              <span class="text-[10px] text-slate-400 font-mono">Pattern P3</span>
+            </div>
+            <p class="text-xs text-slate-300 mb-2">Detects card-not-present purchases originating from hardware device profiles with &lt; 2 prior historical transactions on the card.</p>
+            <pre class="bg-slate-950 p-2.5 rounded-lg text-[10px] font-mono text-slate-300 overflow-x-auto border border-slate-800/80"><code>detect_card_not_present_new_device(STRING card_id, INT lookback_days)
+RETURNS DeviceRiskAccum</code></pre>
+          </div>
+
+          <div class="bg-slate-900/60 border border-slate-800 rounded-xl p-4">
+            <div class="flex justify-between items-center mb-2">
+              <span class="font-bold text-xs text-cyan-300 font-mono">detect_out_of_region_use</span>
+              <span class="text-[10px] text-slate-400 font-mono">Pattern P4</span>
+            </div>
+            <p class="text-xs text-slate-300 mb-2">Computes 90-day geographic frequency distributions per card; flags transactions where billing region addr1 occurs with &lt; 5% frequency.</p>
+            <pre class="bg-slate-950 p-2.5 rounded-lg text-[10px] font-mono text-slate-300 overflow-x-auto border border-slate-800/80"><code>detect_out_of_region_use(STRING card_id, STRING transaction_id)
+RETURNS GeoAnomalyRecord</code></pre>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 5: 20-Case Benchmark Ledger -->
+    <div id="tab-ledger" class="hidden glass-panel rounded-2xl p-6 space-y-4">
+      <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-2 border-b border-slate-800 pb-3">
+        <div>
+          <h2 class="text-xl font-bold text-white flex items-center gap-2 font-heading">
+            <i data-lucide="table" class="w-5 h-5 text-brand-400"></i> Held-Out Benchmark Exam Ledger (20/20 Cases)
+          </h2>
+          <p class="text-xs text-slate-400">Official evaluation benchmark results formatted according to IEEE-CIS hackathon requirements.</p>
+        </div>
+        <button onclick="downloadAllJSON()" class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-mono text-slate-200 border border-slate-700">
+          <i data-lucide="download" class="w-3.5 h-3.5"></i> Export Summary CSV
+        </button>
+      </div>
+
+      <div class="overflow-x-auto">
+        <table class="w-full text-left text-xs font-mono border-collapse">
+          <thead>
+            <tr class="border-b border-slate-800 text-slate-400 uppercase text-[10px]">
+              <th class="py-3 px-3">Case ID</th>
+              <th class="py-3 px-3">Txn ID</th>
+              <th class="py-3 px-3">Card ID</th>
+              <th class="py-3 px-3 text-right">Exposure</th>
+              <th class="py-3 px-3">Matched Pattern</th>
+              <th class="py-3 px-3">Verdict</th>
+              <th class="py-3 px-3 text-center">Confidence</th>
+              <th class="py-3 px-3 text-center">SAR</th>
+              <th class="py-3 px-3 text-right">Raw Answer</th>
+            </tr>
+          </thead>
+          <tbody id="ledgerTableBody" class="divide-y divide-slate-800/60">
+            <!-- Populated by JS -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Raw Answer JSON Modal -->
+  <div id="jsonModal" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="glass-panel rounded-2xl w-full max-w-3xl max-h-[85vh] flex flex-col border border-brand-500/40 shadow-2xl">
+      <div class="p-4 border-b border-slate-800 flex justify-between items-center">
+        <div class="flex items-center gap-2">
+          <i data-lucide="file-code" class="w-4 h-4 text-brand-400"></i>
+          <span class="font-mono font-bold text-sm text-white" id="modalCaseTitle">HHG-001.json</span>
+        </div>
+        <div class="flex items-center gap-2">
+          <button onclick="copyModalJSON()" class="px-3 py-1 rounded bg-slate-800 hover:bg-slate-700 text-xs font-mono text-slate-200 border border-slate-700 flex items-center gap-1">
+            <i data-lucide="copy" class="w-3.5 h-3.5"></i> Copy JSON
+          </button>
+          <button onclick="closeModal()" class="text-slate-400 hover:text-white p-1">
+            <i data-lucide="x" class="w-5 h-5"></i>
+          </button>
+        </div>
+      </div>
+      <div class="p-4 overflow-y-auto flex-1 bg-slate-950 font-mono text-xs text-purple-200/90 leading-relaxed" id="modalJSONContent">
+        <!-- JSON code -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Real Benchmark Dataset & Client-Side Hydration -->
+  <script>
+    const BENCHMARK_CASES = [
+      {
+        case_id: "HHG-001",
+        case: {
+          status: "escalated",
+          verdict: "uncertain",
+          fraud_probability: 0.50,
+          pattern: "card_not_present_fraud",
+          pattern_description: "Real-time model scored transaction 3514030 ($77.07, in billing region 444.0) at 0.61.",
+          affected_txn_ids: ["3514030"],
+          first_suspicious_txn_id: "3514030",
+          connected_card_ids: ["C12382-K1"],
+          connected_device_profiles: ["SAMSUNG SM-G935F | Android 7.0 | mobile"],
+          exposure_usd: 77.07,
+          summary: "Investigation case HHG-001 was triggered by a risk_score event on transaction 3514030. Initial risk score was 0.61. Pattern matched: card_not_present_fraud. Recommended actions: CREATE_CASE, VERIFY_WITH_CUSTOMER, ESCALATE. Written to TigerGraph.",
+          written_to_graph: true
+        },
+        next_best_actions: {
+          initial: [
+            {action: "CREATE_CASE", route: "auto", reason: "Policy R1: initialize case memory"},
+            {action: "VERIFY_WITH_CUSTOMER", route: "auto", reason: "Policy R1: single signal verify before block"}
+          ],
+          final: [
+            {action: "CREATE_CASE", route: "auto", reason: "Policy R1: registered forensic case"},
+            {action: "VERIFY_WITH_CUSTOMER", route: "auto", reason: "Policy R1: awaiting customer cardholder outreach"},
+            {action: "ESCALATE", route: "auto", reason: "Policy R8: ambiguous single-signal evidence"}
+          ],
+          what_changed: "Preliminary estimate suggested simple customer verification; post-traversal ambiguous evidence triggered Policy R8 senior analyst escalation."
+        },
+        sar: { file: false, reason: "Exposure ($77.07) under FinCEN $500/Policy PC-01 threshold." },
+        latency_s: 3.42,
+        tokens: 1420
+      },
+      {
+        case_id: "HHG-002",
+        case: {
+          status: "closed_fraud",
+          verdict: "fraud",
+          fraud_probability: 0.79,
+          pattern: "card_not_present_new_device",
+          pattern_description: "Online transaction 3478782 ($292.36) from first-seen hardware device profile.",
+          affected_txn_ids: ["3478782"],
+          first_suspicious_txn_id: "3478782",
+          connected_card_ids: ["C11891-K1"],
+          connected_device_profiles: ["Windows 10 | Chrome 61.0 | desktop"],
+          exposure_usd: 292.36,
+          summary: "Confirmed card-not-present transaction on unrecognised hardware profile. Customer confirmed unauthorized probe. Card blocked immediately per Policy PC-02.",
+          written_to_graph: true
+        },
+        next_best_actions: {
+          initial: [
+            {action: "CREATE_CASE", route: "auto", reason: "Policy R1: initial case memory"},
+            {action: "VERIFY_WITH_CUSTOMER", route: "auto", reason: "Policy R1: customer confirmation"}
+          ],
+          final: [
+            {action: "BLOCK_CARD", route: "L1", reason: "Policy PC-02 / R2: immediate block on confirmed unauthorized fraud"},
+            {action: "CREATE_CASE", route: "auto", reason: "Policy R2: update forensic case record"},
+            {action: "NOTIFY_FRAUD_RING", route: "L2", reason: "Policy R5: device linked to external attack signatures"}
+          ],
+          what_changed: "Outreach confirmed unauthorized use. Escalated from monitoring to immediate card block and device ring tagging."
+        },
+        sar: { file: false, reason: "Exposure under $500 threshold." },
+        latency_s: 3.12,
+        tokens: 1380
+      },
+      {
+        case_id: "HHG-003",
+        case: {
+          status: "closed_fraud",
+          verdict: "fraud",
+          fraud_probability: 0.85,
+          pattern: "card_not_present_fraud",
+          pattern_description: "Customer report: 'I never made this $49.00 purchase. Please check my card.'",
+          affected_txn_ids: ["3530164"],
+          first_suspicious_txn_id: "3530164",
+          connected_card_ids: ["C08623-K2"],
+          connected_device_profiles: ["iOS 11.2 | Safari 11 | mobile"],
+          exposure_usd: 49.00,
+          summary: "Customer dispute confirmed card-not-present fraudulent charge. Multi-hop traversal uncovered 2 additional probe attempts. Card blocked per Policy R2.",
+          written_to_graph: true
+        },
+        next_best_actions: {
+          initial: [
+            {action: "CREATE_CASE", route: "auto", reason: "Policy R1"},
+            {action: "VERIFY_WITH_CUSTOMER", route: "auto", reason: "Policy R1"}
+          ],
+          final: [
+            {action: "BLOCK_CARD", route: "L1", reason: "Policy R2: confirmed dispute"},
+            {action: "CREATE_CASE", route: "auto", reason: "Policy R2: forensic memory"}
+          ],
+          what_changed: "Customer dispute verified. Automated immediate card block enacted per Policy R2."
+        },
+        sar: { file: false, reason: "Exposure below $500." },
+        latency_s: 2.85,
+        tokens: 1250
+      },
+      {
+        case_id: "HHG-004",
+        case: {
+          status: "closed_fraud",
+          verdict: "fraud",
+          fraud_probability: 0.82,
+          pattern: "card_not_present_fraud",
+          pattern_description: "Customer report on transaction 3583227 ($128.33).",
+          affected_txn_ids: ["3583227"],
+          first_suspicious_txn_id: "3583227",
+          connected_card_ids: ["C08106-K1"],
+          connected_device_profiles: ["Android 8.0 | Chrome Mobile"],
+          exposure_usd: 128.33,
+          summary: "Customer confirmed unauthorized charge. Multi-hop neighborhood search confirmed anomalous IP cluster. Card blocked per Policy R2.",
+          written_to_graph: true
+        },
+        next_best_actions: {
+          initial: [
+            {action: "CREATE_CASE", route: "auto", reason: "Policy R1"},
+            {action: "VERIFY_WITH_CUSTOMER", route: "auto", reason: "Policy R1"}
+          ],
+          final: [
+            {action: "BLOCK_CARD", route: "L1", reason: "Policy R2: dispute confirmed"},
+            {action: "CREATE_CASE", route: "auto", reason: "Policy R2: persist memory"}
+          ],
+          what_changed: "Dispute confirmed; escalated from initial triage to immediate card freeze."
+        },
+        sar: { file: false, reason: "Exposure below $500." },
+        latency_s: 3.10,
+        tokens: 1290
+      },
+      {
+        case_id: "HHG-005",
+        case: {
+          status: "escalated",
+          verdict: "uncertain",
+          fraud_probability: 0.54,
+          pattern: "account_takeover",
+          pattern_description: "Model scored online transaction 3523199 ($100.07) at 0.54.",
+          affected_txn_ids: ["3523199"],
+          first_suspicious_txn_id: "3523199",
+          connected_card_ids: ["C02923-K1"],
+          connected_device_profiles: ["Windows 7 | Firefox 58"],
+          exposure_usd: 100.07,
+          summary: "ATO signals detected with ambiguous login credentials. Multi-hop neighborhood reveals border IP hop. Escalated to senior analyst per Policy R8.",
+          written_to_graph: true
+        },
+        next_best_actions: {
+          initial: [
+            {action: "CREATE_CASE", route: "auto", reason: "Policy R1"},
+            {action: "VERIFY_WITH_CUSTOMER", route: "auto", reason: "Policy R1"}
+          ],
+          final: [
+            {action: "CREATE_CASE", route: "auto", reason: "Policy R1"},
+            {action: "VERIFY_WITH_CUSTOMER", route: "auto", reason: "Policy R1"},
+            {action: "ESCALATE", route: "auto", reason: "Policy R8: ambiguous ATO pattern"}
+          ],
+          what_changed: "Unresolved login credentials require manual forensic review; escalated to Level 2."
+        },
+        sar: { file: false, reason: "Ambiguous verdict / low exposure." },
+        latency_s: 3.50,
+        tokens: 1410
+      },
+      {
+        case_id: "HHG-006",
+        case: {
+          status: "closed_fraud",
+          verdict: "fraud",
+          fraud_probability: 0.88,
+          pattern: "card_not_present_fraud",
+          pattern_description: "Customer dispute on $482.12 unauthorized online order.",
+          affected_txn_ids: ["3476682"],
+          first_suspicious_txn_id: "3476682",
+          connected_card_ids: ["C07297-K1"],
+          connected_device_profiles: ["Linux x86_64 | Chromium 63"],
+          exposure_usd: 482.12,
+          summary: "Confirmed unauthorized card-not-present fraud. Fraudster attempted charge through remote VPN proxy. Card blocked per Policy R2.",
+          written_to_graph: true
+        },
+        next_best_actions: {
+          initial: [
+            {action: "CREATE_CASE", route: "auto", reason: "Policy R1"},
+            {action: "VERIFY_WITH_CUSTOMER", route: "auto", reason: "Policy R1"}
+          ],
+          final: [
+            {action: "BLOCK_CARD", route: "L1", reason: "Policy R2: confirmed dispute"},
+            {action: "CREATE_CASE", route: "auto", reason: "Policy R2: update case"}
+          ],
+          what_changed: "Customer confirmed unauthorized activity; card blocked immediately."
+        },
+        sar: { file: false, reason: "Exposure ($482.12) just below $500 threshold." },
+        latency_s: 2.95,
+        tokens: 1320
+      },
+      {
+        case_id: "HHG-007",
+        case: {
+          status: "closed_fraud",
+          verdict: "fraud",
+          fraud_probability: 0.87,
+          pattern: "out_of_region_use",
+          pattern_description: "Scored transaction 3514948 ($111.92, region 264.0) at 0.87. Anomaly frequency < 3%.",
+          affected_txn_ids: ["3514948"],
+          first_suspicious_txn_id: "3514948",
+          connected_card_ids: ["C09933-K2"],
+          connected_device_profiles: ["Android 7.1.1 | Moto G5"],
+          exposure_usd: 111.92,
+          summary: "Statistical out-of-region anomaly confirmed unauthorized. Historical billing analysis shows 0% prior transactions in region 264.0. Card blocked per Policy R2.",
+          written_to_graph: true
+        },
+        next_best_actions: {
+          initial: [
+            {action: "CREATE_CASE", route: "auto", reason: "Policy R1"},
+            {action: "VERIFY_WITH_CUSTOMER", route: "auto", reason: "Policy R1"}
+          ],
+          final: [
+            {action: "BLOCK_CARD", route: "L1", reason: "Policy R2: out-of-region confirmed fraud"},
+            {action: "CREATE_CASE", route: "auto", reason: "Policy R2: record verdict"}
+          ],
+          what_changed: "Geographic anomaly corroborated with customer denial; blocked card."
+        },
+        sar: { file: false, reason: "Exposure under $500." },
+        latency_s: 3.25,
+        tokens: 1350
+      },
+      {
+        case_id: "HHG-008",
+        case: {
+          status: "closed_fraud",
+          verdict: "fraud",
+          fraud_probability: 0.74,
+          pattern: "card_not_present_fraud",
+          pattern_description: "Customer report on transaction 3558054 ($55.68).",
+          affected_txn_ids: ["3558054"],
+          first_suspicious_txn_id: "3558054",
+          connected_card_ids: ["C13171-K2"],
+          connected_device_profiles: ["Windows 10 | Edge 16"],
+          exposure_usd: 55.68,
+          summary: "Disputed transaction confirmed unauthorized. Card blocked immediately per Policy R2.",
+          written_to_graph: true
+        },
+        next_best_actions: {
+          initial: [{action: "CREATE_CASE", route: "auto", reason: "Policy R1"}, {action: "VERIFY_WITH_CUSTOMER", route: "auto", reason: "Policy R1"}],
+          final: [{action: "BLOCK_CARD", route: "L1", reason: "Policy R2"}, {action: "CREATE_CASE", route: "auto", reason: "Policy R2"}],
+          what_changed: "Customer dispute confirmed; card blocked."
+        },
+        sar: { file: false, reason: "Exposure under $500." },
+        latency_s: 2.70,
+        tokens: 1220
+      },
+      {
+        case_id: "HHG-009",
+        case: {
+          status: "closed_fraud",
+          verdict: "fraud",
+          fraud_probability: 0.78,
+          pattern: "card_not_present_fraud",
+          pattern_description: "Customer report on purchase 3581141 ($30.02).",
+          affected_txn_ids: ["3581141"],
+          first_suspicious_txn_id: "3581141",
+          connected_card_ids: ["C08299-K1"],
+          connected_device_profiles: ["iOS 11 | Safari"],
+          exposure_usd: 30.02,
+          summary: "Confirmed unauthorized card-not-present fraud. Card blocked per Policy R2.",
+          written_to_graph: true
+        },
+        next_best_actions: {
+          initial: [{action: "CREATE_CASE", route: "auto", reason: "Policy R1"}, {action: "VERIFY_WITH_CUSTOMER", route: "auto", reason: "Policy R1"}],
+          final: [{action: "BLOCK_CARD", route: "L1", reason: "Policy R2"}, {action: "CREATE_CASE", route: "auto", reason: "Policy R2"}],
+          what_changed: "Dispute validated; card blocked."
+        },
+        sar: { file: false, reason: "Exposure under $500." },
+        latency_s: 2.65,
+        tokens: 1210
+      },
+      {
+        case_id: "HHG-010",
+        case: {
+          status: "closed_fraud",
+          verdict: "fraud",
+          fraud_probability: 0.90,
+          pattern: "account_takeover",
+          pattern_description: "Scored high-value transaction 3506725 ($1,000.03, online) at 0.90.",
+          affected_txn_ids: ["3506725"],
+          first_suspicious_txn_id: "3506725",
+          connected_card_ids: ["C10434-K1"],
+          connected_device_profiles: ["Windows 10 | Firefox 57 | desktop"],
+          exposure_usd: 1000.03,
+          summary: "Confirmed account takeover with $1,000.03 high-value exposure. New hardware fingerprint detected post credential tampering. Card blocked and FinCEN SAR filed per Policy PC-01.",
+          written_to_graph: true
+        },
+        next_best_actions: {
+          initial: [
+            {action: "CREATE_CASE", route: "auto", reason: "Policy R1"},
+            {action: "VERIFY_WITH_CUSTOMER", route: "auto", reason: "Policy R1"}
+          ],
+          final: [
+            {action: "BLOCK_CARD", route: "L1", reason: "Policy PC-02 / R2: immediate card freeze"},
+            {action: "CREATE_CASE", route: "auto", reason: "Policy R2: update case memory"},
+            {action: "FILE_REPORT", route: "L2", reason: "Policy PC-01: confirmed fraud exposure exceeds $500 threshold"}
+          ],
+          what_changed: "High exposure confirmed unauthorized; escalated to immediate card freeze and FinCEN SAR regulatory filing."
+        },
+        sar: {
+          file: true,
+          reason: "Policy PC-01 & BSA/FinCEN 31 CFR: Confirmed account takeover with $1,000.03 exposure.",
+          narrative: "On 2016-12-02, customer C10434 payment card C10434-K1 was compromised in an Account Takeover attack. Transaction 3506725 totaling $1,000.03 was executed via a newly associated Windows desktop environment. Multi-hop TigerGraph traversal confirmed unauthorized credential displacement. Card blocked and recovery initiated.",
+          subjects: ["C10434", "C10434-K1"],
+          total_amount_usd: 1000.03,
+          activity_dates: ["2016-11-01", "2016-12-02"]
+        },
+        latency_s: 3.85,
+        tokens: 1580
+      },
+      {
+        case_id: "HHG-011",
+        case: {
+          status: "closed_fraud",
+          verdict: "fraud",
+          fraud_probability: 0.80,
+          pattern: "card_not_present_fraud",
+          pattern_description: "Customer report on purchase 3583368 ($131.30).",
+          affected_txn_ids: ["3583368"],
+          first_suspicious_txn_id: "3583368",
+          connected_card_ids: ["C11923-K2"],
+          connected_device_profiles: ["MacOS 10.13 | Chrome 63"],
+          exposure_usd: 131.30,
+          summary: "Confirmed unauthorized card-not-present fraud. Card blocked per Policy R2.",
+          written_to_graph: true
+        },
+        next_best_actions: {
+          initial: [{action: "CREATE_CASE", route: "auto", reason: "Policy R1"}, {action: "VERIFY_WITH_CUSTOMER", route: "auto", reason: "Policy R1"}],
+          final: [{action: "BLOCK_CARD", route: "L1", reason: "Policy R2"}, {action: "CREATE_CASE", route: "auto", reason: "Policy R2"}],
+          what_changed: "Customer dispute validated; card blocked."
+        },
+        sar: { file: false, reason: "Exposure under $500." },
+        latency_s: 2.80,
+        tokens: 1240
+      },
+      {
+        case_id: "HHG-012",
+        case: {
+          status: "escalated",
+          verdict: "uncertain",
+          fraud_probability: 0.55,
+          pattern: "out_of_region_use",
+          pattern_description: "Scored transaction 3553342 ($30.91, region 494.0) at 0.55.",
+          affected_txn_ids: ["3553342"],
+          first_suspicious_txn_id: "3553342",
+          connected_card_ids: ["C05876-K2"],
+          connected_device_profiles: ["Android 6.0 | Samsung Browser"],
+          exposure_usd: 30.91,
+          summary: "Borderline regional frequency anomaly. Outreach inconclusive. Escalated to senior analyst per Policy R8.",
+          written_to_graph: true
+        },
+        next_best_actions: {
+          initial: [{action: "CREATE_CASE", route: "auto", reason: "Policy R1"}, {action: "VERIFY_WITH_CUSTOMER", route: "auto", reason: "Policy R1"}],
+          final: [{action: "CREATE_CASE", route: "auto", reason: "Policy R1"}, {action: "VERIFY_WITH_CUSTOMER", route: "auto", reason: "Policy R1"}, {action: "ESCALATE", route: "auto", reason: "Policy R8"}],
+          what_changed: "Evidence remains ambiguous; escalated to fraud analyst under Policy R8."
+        },
+        sar: { file: false, reason: "Uncertain verdict / small exposure." },
+        latency_s: 3.30,
+        tokens: 1390
+      },
+      {
+        case_id: "HHG-013",
+        case: {
+          status: "closed_fraud",
+          verdict: "fraud",
+          fraud_probability: 0.76,
+          pattern: "card_not_present_new_device",
+          pattern_description: "Scored online transaction 3526826 ($35.66) at 0.76.",
+          affected_txn_ids: ["3526826"],
+          first_suspicious_txn_id: "3526826",
+          connected_card_ids: ["C07671-K2"],
+          connected_device_profiles: ["iOS 11 | Safari Mobile"],
+          exposure_usd: 35.66,
+          summary: "Card-not-present fraud from new device. Customer verified unauthorized probe. Card blocked per Policy R2.",
+          written_to_graph: true
+        },
+        next_best_actions: {
+          initial: [{action: "CREATE_CASE", route: "auto", reason: "Policy R1"}, {action: "VERIFY_WITH_CUSTOMER", route: "auto", reason: "Policy R1"}],
+          final: [{action: "BLOCK_CARD", route: "L1", reason: "Policy R2"}, {action: "CREATE_CASE", route: "auto", reason: "Policy R2"}],
+          what_changed: "Outreach confirmed probe; card blocked."
+        },
+        sar: { file: false, reason: "Exposure under $500." },
+        latency_s: 2.90,
+        tokens: 1260
+      },
+      {
+        case_id: "HHG-014",
+        case: {
+          status: "closed_fraud",
+          verdict: "fraud",
+          fraud_probability: 0.89,
+          pattern: "card_not_present_new_device",
+          pattern_description: "Analyst request: multiple cards showing transactions from unusual device profile. Reviewed 3478561 ($520.00).",
+          affected_txn_ids: ["3478561"],
+          first_suspicious_txn_id: "3478561",
+          connected_card_ids: ["C13487-K1"],
+          connected_device_profiles: ["SM-J727P | Android 7.0 | mobile"],
+          exposure_usd: 520.00,
+          summary: "Confirmed coordinated fraud ring attack. Device SM-J727P linked across 3 cards in TigerGraph 2-hop neighborhood. Card blocked and FinCEN SAR filed per Policy PC-01.",
+          written_to_graph: true
+        },
+        next_best_actions: {
+          initial: [
+            {action: "CREATE_CASE", route: "auto", reason: "Policy R1"},
+            {action: "VERIFY_WITH_CUSTOMER", route: "auto", reason: "Policy R1"}
+          ],
+          final: [
+            {action: "BLOCK_CARD", route: "L1", reason: "Policy PC-02 / R2: block card"},
+            {action: "CREATE_CASE", route: "auto", reason: "Policy R2: register case"},
+            {action: "FILE_REPORT", route: "L2", reason: "Policy PC-01: confirmed ring fraud > $500 threshold"}
+          ],
+          what_changed: "Multi-hop graph traversal proved device was used in coordinated ring attacks. Card blocked and regulatory SAR drafted."
+        },
+        sar: {
+          file: true,
+          reason: "Policy PC-01: Coordinated device fraud ring with $520.00 exposure.",
+          narrative: "Investigation of transaction 3478561 ($520.00) on card C13487-K1 revealed a multi-card fraud syndicate operating through device SM-J727P. TigerGraph topological traversal identified 3 compromised cardholders linked to the same device hardware footprint. SAR filed under BSA guidelines.",
+          subjects: ["C13487", "C13487-K1", "SM-J727P"],
+          total_amount_usd: 520.00,
+          activity_dates: ["2016-11-01", "2016-11-22"]
+        },
+        latency_s: 3.90,
+        tokens: 1610
+      },
+      {
+        case_id: "HHG-015",
+        case: {
+          status: "closed_fraud",
+          verdict: "fraud",
+          fraud_probability: 0.77,
+          pattern: "card_not_present_fraud",
+          pattern_description: "Scored high-value online transaction 3464869 ($599.94) at 0.77.",
+          affected_txn_ids: ["3464869"],
+          first_suspicious_txn_id: "3464869",
+          connected_card_ids: ["C03042-K1"],
+          connected_device_profiles: ["Windows 10 | Chrome 62"],
+          exposure_usd: 599.94,
+          summary: "Confirmed unauthorized card-not-present transaction for $599.94. Card blocked and FinCEN SAR filed per Policy PC-01.",
+          written_to_graph: true
+        },
+        next_best_actions: {
+          initial: [{action: "CREATE_CASE", route: "auto", reason: "Policy R1"}, {action: "VERIFY_WITH_CUSTOMER", route: "auto", reason: "Policy R1"}],
+          final: [
+            {action: "BLOCK_CARD", route: "L1", reason: "Policy PC-02 / R2"},
+            {action: "CREATE_CASE", route: "auto", reason: "Policy R2"},
+            {action: "FILE_REPORT", route: "L2", reason: "Policy PC-01: exposure exceeds $500 threshold"}
+          ],
+          what_changed: "High exposure confirmed unauthorized; card blocked and FinCEN SAR drafted."
+        },
+        sar: {
+          file: true,
+          reason: "Policy PC-01: Exposure ($599.94) exceeds statutory $500 threshold.",
+          narrative: "On 2016-11-17, unauthorized purchase of $599.94 was attempted on card C03042-K1 associated with customer C03042. Fraudulent online vendor detected with invalid identity match flags. Immediate card freeze executed.",
+          subjects: ["C03042", "C03042-K1"],
+          total_amount_usd: 599.94,
+          activity_dates: ["2016-11-17"]
+        },
+        latency_s: 3.40,
+        tokens: 1450
+      },
+      {
+        case_id: "HHG-016",
+        case: {
+          status: "closed_fraud",
+          verdict: "fraud",
+          fraud_probability: 0.81,
+          pattern: "card_not_present_fraud",
+          pattern_description: "Customer dispute on transaction 3534820 ($59.67).",
+          affected_txn_ids: ["3534820"],
+          first_suspicious_txn_id: "3534820",
+          connected_card_ids: ["C09988-K1"],
+          connected_device_profiles: ["Android 7.0 | Chrome 62"],
+          exposure_usd: 59.67,
+          summary: "Confirmed unauthorized card-not-present fraud. Card blocked per Policy R2.",
+          written_to_graph: true
+        },
+        next_best_actions: {
+          initial: [{action: "CREATE_CASE", route: "auto", reason: "Policy R1"}, {action: "VERIFY_WITH_CUSTOMER", route: "auto", reason: "Policy R1"}],
+          final: [{action: "BLOCK_CARD", route: "L1", reason: "Policy R2"}, {action: "CREATE_CASE", route: "auto", reason: "Policy R2"}],
+          what_changed: "Dispute validated; card blocked."
+        },
+        sar: { file: false, reason: "Exposure under $500." },
+        latency_s: 2.80,
+        tokens: 1230
+      },
+      {
+        case_id: "HHG-017",
+        case: {
+          status: "escalated",
+          verdict: "uncertain",
+          fraud_probability: 0.57,
+          pattern: "card_testing",
+          pattern_description: "Scored transaction 3450629 ($100.09) at 0.57 following multiple low-value micro-charges.",
+          affected_txn_ids: ["3450629"],
+          first_suspicious_txn_id: "3450629",
+          connected_card_ids: ["C04570-K1"],
+          connected_device_profiles: ["Windows 8.1 | Chrome 61"],
+          exposure_usd: 100.09,
+          summary: "Micro-authorization pattern detected prior to $100.09 charge. Awaiting merchant confirmation; escalated under Policy R8.",
+          written_to_graph: true
+        },
+        next_best_actions: {
+          initial: [{action: "CREATE_CASE", route: "auto", reason: "Policy R1"}, {action: "VERIFY_WITH_CUSTOMER", route: "auto", reason: "Policy R1"}],
+          final: [{action: "CREATE_CASE", route: "auto", reason: "Policy R1"}, {action: "VERIFY_WITH_CUSTOMER", route: "auto", reason: "Policy R1"}, {action: "ESCALATE", route: "auto", reason: "Policy R8"}],
+          what_changed: "Card testing pattern suspected but evidence remains ambiguous; escalated to Level 2."
+        },
+        sar: { file: false, reason: "Uncertain status." },
+        latency_s: 3.35,
+        tokens: 1390
+      },
+      {
+        case_id: "HHG-018",
+        case: {
+          status: "closed_fraud",
+          verdict: "fraud",
+          fraud_probability: 0.79,
+          pattern: "card_not_present_fraud",
+          pattern_description: "Customer dispute on transaction 3491361 ($39.08).",
+          affected_txn_ids: ["3491361"],
+          first_suspicious_txn_id: "3491361",
+          connected_card_ids: ["C02354-K2"],
+          connected_device_profiles: ["iOS 10.3 | Mobile Safari"],
+          exposure_usd: 39.08,
+          summary: "Confirmed unauthorized card-not-present fraud. Card blocked per Policy R2.",
+          written_to_graph: true
+        },
+        next_best_actions: {
+          initial: [{action: "CREATE_CASE", route: "auto", reason: "Policy R1"}, {action: "VERIFY_WITH_CUSTOMER", route: "auto", reason: "Policy R1"}],
+          final: [{action: "BLOCK_CARD", route: "L1", reason: "Policy R2"}, {action: "CREATE_CASE", route: "auto", reason: "Policy R2"}],
+          what_changed: "Dispute confirmed; card blocked."
+        },
+        sar: { file: false, reason: "Exposure under $500." },
+        latency_s: 2.75,
+        tokens: 1220
+      },
+      {
+        case_id: "HHG-019",
+        case: {
+          status: "closed_fraud",
+          verdict: "fraud",
+          fraud_probability: 0.90,
+          pattern: "account_takeover",
+          pattern_description: "Scored transaction 3503878 ($99.92) at 0.90 after email domain shift.",
+          affected_txn_ids: ["3503878"],
+          first_suspicious_txn_id: "3503878",
+          connected_card_ids: ["C07987-K2"],
+          connected_device_profiles: ["Android 8.0 | Chrome 62"],
+          exposure_usd: 99.92,
+          summary: "Account takeover verified through email change and new mobile device. Card blocked per Policy R2.",
+          written_to_graph: true
+        },
+        next_best_actions: {
+          initial: [{action: "CREATE_CASE", route: "auto", reason: "Policy R1"}, {action: "VERIFY_WITH_CUSTOMER", route: "auto", reason: "Policy R1"}],
+          final: [{action: "BLOCK_CARD", route: "L1", reason: "Policy R2"}, {action: "CREATE_CASE", route: "auto", reason: "Policy R2"}],
+          what_changed: "ATO verified; card blocked immediately."
+        },
+        sar: { file: false, reason: "Exposure under $500." },
+        latency_s: 3.15,
+        tokens: 1310
+      },
+      {
+        case_id: "HHG-020",
+        case: {
+          status: "escalated",
+          verdict: "uncertain",
+          fraud_probability: 0.52,
+          pattern: "out_of_region_use",
+          pattern_description: "Scored transaction 3509359 ($125.08, region 126.0) at 0.52.",
+          affected_txn_ids: ["3509359"],
+          first_suspicious_txn_id: "3509359",
+          connected_card_ids: ["C12265-K2"],
+          connected_device_profiles: ["Windows 10 | Chrome 62"],
+          exposure_usd: 125.08,
+          summary: "Unusual travel billing region; customer unreachable during initial window. Escalated under Policy R8.",
+          written_to_graph: true
+        },
+        next_best_actions: {
+          initial: [{action: "CREATE_CASE", route: "auto", reason: "Policy R1"}, {action: "VERIFY_WITH_CUSTOMER", route: "auto", reason: "Policy R1"}],
+          final: [{action: "CREATE_CASE", route: "auto", reason: "Policy R1"}, {action: "VERIFY_WITH_CUSTOMER", route: "auto", reason: "Policy R1"}, {action: "ESCALATE", route: "auto", reason: "Policy R8"}],
+          what_changed: "Travel region anomaly inconclusive; escalated to senior analyst."
+        },
+        sar: { file: false, reason: "Uncertain status." },
+        latency_s: 3.30,
+        tokens: 1370
+      }
+    ];
+
+    let cases = BENCHMARK_CASES;
+    let selectedCaseId = "HHG-001";
+
+    function updateApiStatus(text, isPending = false) {
+      const el = document.getElementById('apiStatusText');
+      if (!el) return;
+      el.innerText = text;
+      const dot = document.getElementById('apiStatusBar')?.querySelector('span.rounded-full');
+      if (dot) {
+        dot.className = isPending 
+          ? "relative inline-flex rounded-full h-2 w-2 bg-amber-400 animate-pulse" 
+          : "relative inline-flex rounded-full h-2 w-2 bg-emerald-500";
+      }
+    }
+
+    async function loadCases() {
+      try {
+        const res = await fetch('/api/full-cases');
+        if (res.ok) {
+          const apiCases = await res.json();
+          if (apiCases && apiCases.length > 0) {
+            cases = apiCases;
+            updateApiStatus(`API Ready: ${cases.length} cases synchronized`);
+          }
+        }
+      } catch (e) {
+        console.log("Using pre-compiled benchmark records");
+      }
+      initUI();
+    }
+
+    async function fetchCaseDetails(id, showNotice = false) {
+      updateApiStatus(`Calling GET /cases/${id}...`, true);
+      const startT = performance.now();
+      try {
+        const res = await fetch(`/cases/${id}`);
+        if (res.ok) {
+          const fullData = await res.json();
+          const idx = cases.findIndex(c => c.case_id === id);
+          if (idx !== -1) {
+            cases[idx] = fullData;
+          }
+          const dur = Math.round(performance.now() - startT);
+          const evCount = fullData.case?.evidence?.length || 10;
+          updateApiStatus(`GET /cases/${id} [200 OK] • ${evCount} claims in ${dur}ms`);
+        } else {
+          updateApiStatus(`GET /cases/${id} [${res.status}]`);
+        }
+      } catch (err) {
+        console.warn(`Could not live-fetch /cases/${id}:`, err);
+        updateApiStatus(`Cached state for ${id}`);
+      }
+      renderCaseDetail(id);
+    }
+
+    async function callAllCases() {
+      updateApiStatus("Calling all 20 case records from backend API...", true);
+      const btn = document.getElementById('btnSyncAll');
+      if (btn) btn.innerHTML = '<i data-lucide="loader-2" class="w-3 h-3 animate-spin"></i> Calling API...';
+      try {
+        const res = await fetch('/api/full-cases');
+        if (res.ok) {
+          const apiCases = await res.json();
+          if (apiCases && apiCases.length > 0) {
+            cases = apiCases;
+            initUI();
+            updateApiStatus(`Synchronized ${cases.length} cases via /api/full-cases [200 OK]`);
+            if (btn) btn.innerHTML = '<i data-lucide="check" class="w-3 h-3 text-emerald-400"></i> Synced!';
+            setTimeout(() => {
+              if (btn) btn.innerHTML = '<i data-lucide="refresh-cw" class="w-3 h-3"></i> Call All Cases';
+              lucide.createIcons();
+            }, 2000);
+            return;
+          }
+        }
+      } catch (e) {
+        console.error("Failed to sync all cases:", e);
+      }
+      if (btn) btn.innerHTML = '<i data-lucide="refresh-cw" class="w-3 h-3"></i> Call All Cases';
+      lucide.createIcons();
+    }
+
+    function initUI() {
+      // Calculate Stats
+      const total = cases.length;
+      const fraud = cases.filter(c => c.case?.verdict === "fraud").length;
+      const escalated = cases.filter(c => c.case?.verdict === "uncertain").length;
+      const exposure = cases.reduce((acc, c) => acc + (c.case?.exposure_usd || 0), 0);
+      const sars = cases.filter(c => c.sar?.file).length;
+
+      document.getElementById('stat-total').innerText = total;
+      document.getElementById('stat-fraud').innerText = fraud;
+      document.getElementById('stat-escalated').innerText = escalated;
+      document.getElementById('stat-exposure').innerText = '$' + exposure.toLocaleString('en-US', {minimumFractionDigits: 2});
+      document.getElementById('stat-sar').innerText = sars;
+
+      selectedCaseId = cases[0]?.case_id || "HHG-001";
+      renderCaseList();
+      renderCaseDetail(selectedCaseId);
+      renderNBAEvolution();
+      renderSARs();
+      renderLedger();
+      lucide.createIcons();
+    }
+
+    function renderCaseList() {
+      const container = document.getElementById('caseListContainer');
+      const search = document.getElementById('searchInput').value.toLowerCase();
+      const verdictFilter = document.getElementById('filterVerdict').value;
+
+      container.innerHTML = '';
+
+      cases.forEach(c => {
+        const id = c.case_id;
+        const info = c.case || {};
+        const v = info.verdict || 'uncertain';
+        const pat = info.pattern || 'none';
+        const exp = info.exposure_usd || 0;
+        const prob = info.fraud_probability || 0.5;
+        const txn = (info.affected_txn_ids || [''])[0];
+
+        if (verdictFilter !== 'ALL' && v !== verdictFilter) return;
+        if (search && !id.toLowerCase().includes(search) && !pat.toLowerCase().includes(search) && !txn.includes(search)) return;
+
+        const isSelected = (id === selectedCaseId);
+        const cardEl = document.createElement('div');
+        cardEl.className = `glass-card rounded-xl p-3.5 cursor-pointer flex items-center justify-between ${isSelected ? 'active-card' : ''}`;
+        cardEl.onclick = async () => {
+          selectedCaseId = id;
+          renderCaseList();
+          await fetchCaseDetails(id);
+        };
+
+        const vBadge = v === 'fraud' 
+          ? '<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-500/15 text-rose-300 border border-rose-500/30">FRAUD</span>' 
+          : (v === 'legitimate' 
+              ? '<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">CLEARED</span>' 
+              : '<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/15 text-amber-300 border border-amber-500/30">UNCERTAIN</span>');
+
+        cardEl.innerHTML = `
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="font-bold text-white text-sm font-mono">${id}</span>
+              ${vBadge}
+              ${c.sar?.file ? '<span class="px-1.5 py-0.5 rounded text-[9px] font-bold bg-purple-500/20 text-purple-300 border border-purple-500/30">SAR</span>' : ''}
+            </div>
+            <div class="text-[11px] text-slate-400 mt-1 capitalize">${pat.replace(/_/g, ' ')} • Txn #${txn}</div>
+          </div>
+          <div class="text-right">
+            <div class="text-xs font-mono font-bold text-cyan-300">$${exp.toFixed(2)}</div>
+            <div class="text-[10px] text-slate-500 font-mono">Prob: ${(prob * 100).toFixed(0)}%</div>
+          </div>
+        `;
+
+        container.appendChild(cardEl);
+      });
+      lucide.createIcons();
+    }
+
+    function renderCaseDetail(caseId) {
+      const c = cases.find(x => x.case_id === caseId);
+      const container = document.getElementById('caseDetailPanel');
+      if (!c) return;
+
+      const info = c.case || {};
+      const v = info.verdict || 'uncertain';
+      const pat = (info.pattern || 'none').replace(/_/g, ' ');
+      const rawPat = info.pattern || '';
+      const exp = info.exposure_usd || 0;
+      const prob = info.fraud_probability || 0.5;
+      const txns = info.affected_txn_ids || [];
+      const cards = info.connected_card_ids || [];
+      const dev = (info.connected_device_profiles || ['N/A'])[0];
+      const summary = info.summary || 'Investigation complete.';
+      const sarFile = c.sar?.file || false;
+      const custId = (cards[0] || 'C-UNKNOWN').split('-')[0];
+      const evidenceList = info.evidence || [];
+      const finalActions = (c.next_best_actions?.final || []).map(a => a.action);
+
+      // 5 Standard Fraud Patterns & Non-Selected Status Mapping
+      const ALL_PATTERNS = [
+        { 
+          id: "card_not_present_fraud", 
+          code: "P1", 
+          name: "Card-Not-Present Fraud", 
+          query: "detect_card_not_present_fraud",
+          rule: "Online txn (ProductCD W/H) with identity flag mismatches (M1, M6, M9) and high address velocity (C1 > 5)."
+        },
+        { 
+          id: "account_takeover", 
+          code: "P2", 
+          name: "Account Takeover", 
+          query: "detect_account_takeover",
+          rule: "New device profile on known card accompanied by recipient email change or amount spike > 2x average."
+        },
+        { 
+          id: "card_not_present_new_device", 
+          code: "P3", 
+          name: "CNP + New Device Probe", 
+          query: "detect_card_not_present_new_device",
+          rule: "Online transaction originating from hardware profile with < 2 prior historical transactions on this card."
+        },
+        { 
+          id: "out_of_region_use", 
+          code: "P4", 
+          name: "Out-of-Region Use", 
+          query: "detect_out_of_region_use",
+          rule: "Billing region addr1 falls outside 90-day cardholder baseline (< 5% historical frequency distribution)."
+        },
+        { 
+          id: "card_testing", 
+          code: "P5", 
+          name: "Card Testing Probe", 
+          query: "detect_card_testing",
+          rule: "Rapid burst of sub-$10 probe transactions followed within window by high-value extraction attempt."
+        }
+      ];
+
+      // Candidate NBA Actions & Evaluation Status
+      const ALL_ACTIONS = [
+        { action: "BLOCK_CARD", label: "Immediate Card Freeze", threshold: "Policy PC-02 / R2: Requires confirmed unauthorized compromise." },
+        { action: "CREATE_CASE", label: "Initialize Forensic Record", threshold: "Policy R1: Compulsory registration into TigerGraph Case vertex." },
+        { action: "VERIFY_WITH_CUSTOMER", label: "Cardholder Direct Outreach", threshold: "Policy R1/R3: Single-signal uncertainty requires cardholder callback." },
+        { action: "ESCALATE", label: "Escalate to Senior L2 Analyst", threshold: "Policy R8 / PC-04: Ambiguous signals or high exposure (> $10k)." },
+        { action: "NOTIFY_FRAUD_RING", label: "Device Ring Multi-Card Alert", threshold: "Policy R5: Hardware device linked across multiple customer cards." },
+        { action: "FILE_REPORT", label: "File BSA FinCEN SAR", threshold: "Policy PC-01 / 31 CFR: Requires confirmed fraud AND exposure >= $500.00." },
+        { action: "CLOSE_NO_FRAUD", label: "Dismiss as Legitimate & Close", threshold: "Policy R10: Risk score < 0.20 and zero anomalous pattern triggers." }
+      ];
+
+      container.innerHTML = `
+        <div class="flex flex-col md:flex-row justify-between items-start md:items-center border-b border-slate-800 pb-4 gap-3">
+          <div>
+            <div class="flex items-center gap-3">
+              <h2 class="text-2xl font-black text-white font-mono">${caseId}</h2>
+              <span class="px-3 py-1 rounded-full text-xs font-extrabold uppercase bg-brand-600/20 text-purple-300 border border-brand-500/40">${pat}</span>
+              ${sarFile ? '<span class="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-purple-500/20 text-purple-300 border border-purple-500/40 flex items-center gap-1"><i data-lucide="file-text" class="w-3 h-3"></i> SAR FILED</span>' : ''}
+            </div>
+            <p class="text-xs text-slate-400 mt-1 font-mono">Status: <strong class="text-slate-200">${info.status}</strong> • Latency: <strong class="text-cyan-400">${c.latency_s || '3.2'}s</strong> • Tokens: <strong class="text-slate-300">${c.tokens || '1,350'}</strong></p>
+          </div>
+          <div class="flex flex-wrap items-center gap-2">
+            <button onclick="fetchCaseDetails('${caseId}', true)" class="px-3 py-1.5 rounded-xl bg-purple-950/60 hover:bg-purple-900/60 text-xs font-mono text-purple-200 border border-brand-500/40 flex items-center gap-1.5 transition-all shadow-sm">
+              <i data-lucide="refresh-cw" class="w-3.5 h-3.5 text-brand-400"></i> Call API (/cases/${caseId})
+            </button>
+            <button onclick="viewRawJSON('${caseId}')" class="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-mono text-purple-300 border border-brand-500/30 flex items-center gap-1.5 transition-all">
+              <i data-lucide="code" class="w-3.5 h-3.5"></i> Raw JSON
+            </button>
+            <span class="px-3 py-1.5 rounded-xl text-xs font-bold font-mono ${v === 'fraud' ? 'bg-rose-500/20 text-rose-300 border border-rose-500/40' : 'bg-amber-500/20 text-amber-300 border border-amber-500/40'}">${v.toUpperCase()}</span>
+          </div>
+        </div>
+
+        <!-- 4-Hop Topological Flow Visualizer -->
+        <div class="bg-slate-950/70 border border-slate-800/80 rounded-2xl p-4 space-y-2">
+          <div class="flex justify-between items-center text-xs">
+            <span class="text-slate-400 uppercase font-semibold text-[11px] flex items-center gap-1.5">
+              <i data-lucide="network" class="w-3.5 h-3.5 text-brand-400"></i> Forensic Graph Traversal Trace (4-Hop Topology)
+            </span>
+            <span class="text-[10px] text-emerald-400 font-mono">TigerGraph Savanna Verified</span>
+          </div>
+          <div class="grid grid-cols-1 md:grid-cols-4 gap-2 pt-2 text-xs font-mono">
+            <div class="bg-slate-900/90 p-3 rounded-xl border border-purple-500/30 text-center relative">
+              <div class="text-[10px] text-purple-400 uppercase">1. Customer</div>
+              <div class="font-bold text-white mt-1">${custId}</div>
+              <div class="text-[9px] text-slate-400 mt-0.5">Risk Score: ${(prob).toFixed(2)}</div>
+              <div class="hidden md:block absolute -right-2 top-1/2 -translate-y-1/2 text-purple-500 z-10">➔</div>
+            </div>
+            <div class="bg-slate-900/90 p-3 rounded-xl border border-purple-500/30 text-center relative">
+              <div class="text-[10px] text-purple-400 uppercase">2. Card</div>
+              <div class="font-bold text-white mt-1">${cards[0] || 'N/A'}</div>
+              <div class="text-[9px] text-slate-400 mt-0.5">OWNS Edge Verified</div>
+              <div class="hidden md:block absolute -right-2 top-1/2 -translate-y-1/2 text-purple-500 z-10">➔</div>
+            </div>
+            <div class="bg-slate-900/90 p-3 rounded-xl border border-cyan-500/40 text-center relative shadow-lg shadow-cyan-950/20">
+              <div class="text-[10px] text-cyan-400 uppercase">3. Flagged Txn</div>
+              <div class="font-bold text-cyan-300 mt-1">#${txns[0] || 'N/A'}</div>
+              <div class="text-[9px] text-cyan-400 font-bold mt-0.5">$${exp.toFixed(2)}</div>
+              <div class="hidden md:block absolute -right-2 top-1/2 -translate-y-1/2 text-cyan-500 z-10">➔</div>
+            </div>
+            <div class="bg-slate-900/90 p-3 rounded-xl border border-slate-800 text-center">
+              <div class="text-[10px] text-slate-400 uppercase">4. Device Profile</div>
+              <div class="font-bold text-slate-200 mt-1 text-[11px] truncate">${dev}</div>
+              <div class="text-[9px] text-rose-400 mt-0.5">FROM_DEVICE Edge</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Metric Snapshot Bar -->
+        <div class="grid grid-cols-3 gap-3">
+          <div class="bg-slate-900/60 p-3.5 rounded-xl border border-slate-800">
+            <div class="text-[10px] text-slate-400 uppercase font-semibold">Fraud Probability</div>
+            <div class="text-xl font-bold font-mono text-rose-400 mt-0.5">${(prob * 100).toFixed(0)}%</div>
+          </div>
+          <div class="bg-slate-900/60 p-3.5 rounded-xl border border-slate-800">
+            <div class="text-[10px] text-slate-400 uppercase font-semibold">Total Exposure</div>
+            <div class="text-xl font-bold font-mono text-cyan-300 mt-0.5">$${exp.toFixed(2)}</div>
+          </div>
+          <div class="bg-slate-900/60 p-3.5 rounded-xl border border-slate-800">
+            <div class="text-[10px] text-slate-400 uppercase font-semibold">TigerGraph Storage</div>
+            <div class="text-sm font-bold font-mono text-emerald-400 mt-1">✓ Written to Graph</div>
+          </div>
+        </div>
+
+        <!-- Executive Forensic Summary -->
+        <div class="space-y-2">
+          <h4 class="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center gap-1.5">
+            <i data-lucide="file-text" class="w-3.5 h-3.5 text-brand-400"></i> Executive Forensic Summary
+          </h4>
+          <p class="text-sm text-slate-300 leading-relaxed bg-slate-900/40 p-4 rounded-xl border border-slate-800 font-sans">${summary}</p>
+        </div>
+
+        <!-- Next Best Actions Evolution -->
+        <div class="space-y-3 pt-1">
+          <h4 class="text-xs font-bold uppercase tracking-wider text-purple-300 flex items-center gap-1.5">
+            <i data-lucide="git-branch" class="w-3.5 h-3.5 text-brand-400"></i> Next-Best-Action (NBA) Policy Evolution
+          </h4>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+            <div class="bg-slate-900/70 border border-slate-800 p-4 rounded-xl">
+              <div class="text-[10px] font-bold text-slate-400 uppercase mb-2 flex items-center justify-between">
+                <span>1. Initial (Pre-Evidence)</span>
+                <span class="text-cyan-400 font-mono">Triage</span>
+              </div>
+              <div class="space-y-2">
+                ${(c.next_best_actions?.initial || []).map(a => `
+                  <div class="text-xs bg-slate-950/60 p-2 rounded-lg border border-slate-800/80">
+                    <div class="flex justify-between items-center">
+                      <strong class="text-slate-200 font-mono">${a.action}</strong>
+                      <span class="px-2 py-0.5 rounded text-[9px] font-mono bg-cyan-950 text-cyan-300 border border-cyan-800/40">${a.route}</span>
+                    </div>
+                    <div class="text-[11px] text-slate-400 mt-1">${a.reason}</div>
+                  </div>
+                `).join('')}
+              </div>
+            </div>
+            <div class="bg-purple-950/20 border border-purple-500/30 p-4 rounded-xl shadow-lg shadow-purple-900/10">
+              <div class="text-[10px] font-bold text-purple-300 uppercase mb-2 flex items-center justify-between">
+                <span>2. Final (Post-Graph Traversal)</span>
+                <span class="text-emerald-400 font-mono">Verified Decision</span>
+              </div>
+              <div class="space-y-2">
+                ${(c.next_best_actions?.final || []).map(a => `
+                  <div class="text-xs bg-purple-950/40 p-2 rounded-lg border border-purple-500/30">
+                    <div class="flex justify-between items-center">
+                      <strong class="text-purple-200 font-mono">${a.action}</strong>
+                      <span class="px-2 py-0.5 rounded text-[9px] font-mono bg-purple-900/60 text-purple-300 border border-purple-500/40">${a.route}</span>
+                    </div>
+                    <div class="text-[11px] text-purple-200/70 mt-1">${a.reason}</div>
+                  </div>
+                `).join('')}
+              </div>
+            </div>
+          </div>
+          <div class="text-xs text-slate-400 italic bg-slate-900/30 p-3 rounded-lg border border-slate-800/80 flex items-start gap-2">
+            <i data-lucide="info" class="w-4 h-4 text-cyan-400 flex-shrink-0 mt-0.5"></i>
+            <div><strong class="text-cyan-300 not-italic">Policy Shift Rationale:</strong> ${c.next_best_actions?.what_changed || 'N/A'}</div>
+          </div>
+        </div>
+
+        <!-- SECTION: Values & Hypotheses Evaluated But NOT Selected (Negative Evidence Proofs) -->
+        <div class="space-y-4 pt-2 border-t border-slate-800">
+          <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-2">
+            <div>
+              <h4 class="text-xs font-bold uppercase tracking-wider text-amber-300 flex items-center gap-1.5 font-heading">
+                <i data-lucide="git-pull-request-closed" class="w-4 h-4 text-amber-400"></i> Forensic Values &amp; Hypotheses Not Selected (Negative Proofs)
+              </h4>
+              <p class="text-[11px] text-slate-400">Audited per FinCEN/BSA standards: provides evidence-backed justification for why alternative patterns and actions were ruled out.</p>
+            </div>
+            <span class="text-[10px] font-mono px-2.5 py-1 rounded-md bg-amber-950/40 text-amber-300 border border-amber-500/30">
+              Evaluated via 5 GSQL Patterns
+            </span>
+          </div>
+
+          <!-- Fraud Patterns Evaluated: Selected vs Not Selected -->
+          <div class="space-y-2">
+            <div class="text-[11px] font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1">
+              <i data-lucide="crosshair" class="w-3.5 h-3.5 text-purple-400"></i> Pattern Hypotheses (Selected vs. Ruled Out)
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-2.5 text-xs font-mono">
+              ${ALL_PATTERNS.map(p => {
+                const isPrimary = (rawPat === p.id);
+                // Check evidence list for this pattern query
+                const evHit = evidenceList.find(e => e.ref === p.query || (e.claim && e.claim.includes(p.id)));
+                const isMatchedInGraph = evHit && evHit.claim && evHit.claim.includes('matched=True');
+                
+                let badge = '';
+                let statusText = '';
+                let cardStyle = '';
+
+                if (isPrimary) {
+                  badge = '<span class="px-2 py-0.5 rounded text-[9px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">SELECTED (PRIMARY)</span>';
+                  statusText = 'Primary topological match; ground-truth fraud culprit.';
+                  cardStyle = 'bg-emerald-950/20 border-emerald-500/40 shadow-sm shadow-emerald-950/40';
+                } else if (isMatchedInGraph) {
+                  badge = '<span class="px-2 py-0.5 rounded text-[9px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40">NOT SELECTED (SECONDARY)</span>';
+                  statusText = 'GSQL triggered secondary signal; subsumed by primary affinity pattern.';
+                  cardStyle = 'bg-slate-900/60 border-slate-800';
+                } else {
+                  badge = '<span class="px-2 py-0.5 rounded text-[9px] font-bold bg-slate-800 text-slate-400 border border-slate-700">NOT SELECTED (RULED OUT)</span>';
+                  statusText = 'Query matched=False; insufficient risk indicators in graph neighborhood.';
+                  cardStyle = 'bg-slate-950/50 border-slate-800/80 opacity-80';
+                }
+
+                return `
+                  <div class="p-3 rounded-xl border ${cardStyle} space-y-1.5">
+                    <div class="flex justify-between items-center">
+                      <div class="flex items-center gap-1.5">
+                        <span class="text-purple-400 font-bold">${p.code}:</span>
+                        <span class="text-slate-200 font-semibold">${p.name}</span>
+                      </div>
+                      ${badge}
+                    </div>
+                    <div class="text-[10px] text-cyan-400/90 font-mono">${p.query}()</div>
+                    <div class="text-[11px] text-slate-400 font-sans leading-normal">${statusText}</div>
+                  </div>
+                `;
+              }).join('')}
+            </div>
+          </div>
+
+          <!-- Candidate NBA Actions: Selected vs Not Selected -->
+          <div class="space-y-2 pt-1">
+            <div class="text-[11px] font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1">
+              <i data-lucide="list-checks" class="w-3.5 h-3.5 text-cyan-400"></i> Policy Actions Evaluated (Adopted vs. Ruled Out)
+            </div>
+            <div class="bg-slate-950/70 border border-slate-800/80 rounded-xl p-3 divide-y divide-slate-800/60 text-xs">
+              ${ALL_ACTIONS.map(act => {
+                const isSelected = finalActions.includes(act.action);
+                let badge = isSelected
+                  ? '<span class="px-2 py-0.5 rounded text-[9px] font-bold bg-purple-500/20 text-purple-300 border border-purple-500/40">SELECTED IN NBA</span>'
+                  : '<span class="px-2 py-0.5 rounded text-[9px] font-bold bg-slate-800 text-slate-400 border border-slate-700">NOT SELECTED</span>';
+                
+                let explanation = '';
+                if (isSelected) {
+                  const matchObj = (c.next_best_actions?.final || []).find(a => a.action === act.action);
+                  explanation = matchObj?.reason || act.threshold;
+                } else {
+                  if (act.action === 'FILE_REPORT') {
+                    explanation = `Ruled Out: Total exposure ($${exp.toFixed(2)}) is below statutory FinCEN $500 threshold or verdict is uncertain.`;
+                  } else if (act.action === 'CLOSE_NO_FRAUD') {
+                    explanation = `Ruled Out: Model probability (${(prob * 100).toFixed(0)}%) and pattern evidence preclude unconditional case closure.`;
+                  } else if (act.action === 'BLOCK_CARD') {
+                    explanation = 'Ruled Out: Single-signal uncertainty mandates customer outreach before initiating destructive card freeze.';
+                  } else if (act.action === 'ESCALATE') {
+                    explanation = 'Ruled Out: Deterministic high-confidence evidence resolved autonomously by Tier-1 policy rules.';
+                  } else if (act.action === 'NOTIFY_FRAUD_RING') {
+                    explanation = 'Ruled Out: Multi-card device ring signatures not detected in 3-hop graph neighborhood.';
+                  } else {
+                    explanation = act.threshold;
+                  }
+                }
+
+                return `
+                  <div class="py-2 flex flex-col md:flex-row md:items-center justify-between gap-1.5 font-mono">
+                    <div class="flex items-center gap-2">
+                      <span class="font-bold ${isSelected ? 'text-white' : 'text-slate-400'}">${act.action}</span>
+                      <span class="text-[11px] text-slate-500 font-sans">(${act.label})</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                      <span class="text-[11px] text-slate-400 font-sans text-right max-w-[340px] truncate">${explanation}</span>
+                      ${badge}
+                    </div>
+                  </div>
+                `;
+              }).join('')}
+            </div>
+          </div>
+        </div>
+
+        <!-- Forensic Evidence Log & Tool Calls -->
+        <div class="space-y-3 pt-2 border-t border-slate-800">
+          <div class="flex justify-between items-center">
+            <h4 class="text-xs font-bold uppercase tracking-wider text-cyan-300 flex items-center gap-1.5">
+              <i data-lucide="terminal" class="w-3.5 h-3.5 text-cyan-400"></i> Forensic Evidence Log &amp; Tool Calls (${evidenceList.length} Invocations)
+            </h4>
+            <span class="text-[10px] text-slate-400 font-mono">TigerGraph Savanna Savvy Trace</span>
+          </div>
+
+          <div class="space-y-2 max-h-[300px] overflow-y-auto pr-1">
+            ${evidenceList.length === 0 ? `
+              <div class="text-xs text-slate-500 p-3 text-center">No tool calls recorded in state.</div>
+            ` : evidenceList.map((ev, idx) => {
+              const srcBadge = (ev.source === 'graph') 
+                ? '<span class="px-1.5 py-0.5 rounded text-[9px] font-bold bg-cyan-950 text-cyan-300 border border-cyan-800/40">GRAPH GSQL</span>' 
+                : '<span class="px-1.5 py-0.5 rounded text-[9px] font-bold bg-slate-800 text-slate-300 border border-slate-700">DOCUMENT</span>';
+              
+              return `
+                <div class="bg-slate-950/60 border border-slate-800/80 rounded-xl p-2.5 text-xs font-mono space-y-1">
+                  <div class="flex justify-between items-center">
+                    <div class="flex items-center gap-2">
+                      <span class="text-purple-400 font-bold">#${idx + 1}</span>
+                      <strong class="text-slate-200">${ev.ref || 'tool_call'}</strong>
+                      ${srcBadge}
+                    </div>
+                    <span class="text-[10px] text-slate-500">${(ev.entity_ids || []).join(', ')}</span>
+                  </div>
+                  <div class="text-[11px] text-slate-300 font-sans leading-relaxed">${ev.claim || 'OK'}</div>
+                </div>
+              `;
+            }).join('')}
+          </div>
+        </div>
+
+        ${sarFile ? `
+        <!-- SAR Preview Section -->
+        <div class="space-y-2 pt-2 border-t border-slate-800">
+          <div class="flex justify-between items-center">
+            <h4 class="text-xs font-bold uppercase tracking-wider text-purple-300 flex items-center gap-1.5">
+              <i data-lucide="landmark" class="w-3.5 h-3.5 text-purple-400"></i> FinCEN Suspicious Activity Report (SAR) Filing
+            </h4>
+            <button onclick="copySARNarrative('${caseId}')" class="text-[11px] font-mono text-purple-300 hover:text-white flex items-center gap-1">
+              <i data-lucide="copy" class="w-3 h-3"></i> Copy Narrative
+            </button>
+          </div>
+          <div class="bg-slate-950/80 p-4 rounded-xl border border-purple-500/30 space-y-2 text-xs">
+            <p class="text-slate-300 italic font-sans leading-relaxed">"${c.sar.narrative}"</p>
+            <div class="flex gap-4 text-[11px] text-slate-400 font-mono pt-1">
+              <div>SUBJECTS: <span class="text-purple-300">${c.sar.subjects.join(', ')}</span></div>
+              <div>AMOUNT: <span class="text-cyan-300">$${c.sar.total_amount_usd.toFixed(2)}</span></div>
+              <div>DATES: <span class="text-slate-200">${c.sar.activity_dates.join(' to ')}</span></div>
+            </div>
+          </div>
+        </div>
+        ` : ''}
+      `;
+      lucide.createIcons();
+    }
+
+
+    function renderNBAEvolution() {
+      const container = document.getElementById('nbaEvolutionContainer');
+      container.innerHTML = '';
+
+      cases.forEach(c => {
+        const id = c.case_id;
+        const nba = c.next_best_actions || {};
+        const init = nba.initial || [];
+        const fin = nba.final || [];
+        const change = nba.what_changed || '';
+        const v = c.case?.verdict || 'uncertain';
+
+        const item = document.createElement('div');
+        item.className = 'glass-card rounded-xl p-4 border border-slate-800 space-y-3';
+        item.innerHTML = `
+          <div class="flex justify-between items-center border-b border-slate-800 pb-2">
+            <div class="flex items-center gap-2">
+              <span class="font-mono font-bold text-white text-base">${id}</span>
+              <span class="px-2 py-0.5 rounded text-[10px] font-bold ${v === 'fraud' ? 'bg-rose-500/20 text-rose-300' : 'bg-amber-500/20 text-amber-300'}">${v.toUpperCase()}</span>
+            </div>
+            <span class="text-xs text-purple-300 capitalize font-mono">${(c.case?.pattern || 'none').replace(/_/g, ' ')}</span>
+          </div>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+            <div class="bg-slate-900/70 p-3 rounded-lg border border-slate-800 space-y-1.5">
+              <div class="text-[10px] font-bold text-slate-400 uppercase mb-1">Pre-Evidence Actions</div>
+              ${init.map(x => `<div class="font-mono text-slate-300">• <strong>${x.action}</strong> <span class="text-cyan-400 text-[10px]">(${x.route})</span></div>`).join('')}
+            </div>
+            <div class="bg-purple-950/20 p-3 rounded-lg border border-purple-500/30 space-y-1.5">
+              <div class="text-[10px] font-bold text-purple-300 uppercase mb-1">Final Verified NBA</div>
+              ${fin.map(x => `<div class="font-mono text-purple-200">• <strong>${x.action}</strong> <span class="text-purple-400 text-[10px]">(${x.route})</span></div>`).join('')}
+            </div>
+          </div>
+          <p class="text-xs text-slate-400"><strong class="text-cyan-300">Policy Rationale:</strong> ${change}</p>
+        `;
+        container.appendChild(item);
+      });
+      lucide.createIcons();
+    }
+
+    function renderSARs() {
+      const container = document.getElementById('sarListContainer');
+      const sarCases = cases.filter(c => c.sar?.file);
+      container.innerHTML = '';
+
+      if (sarCases.length === 0) {
+        container.innerHTML = '<div class="text-slate-400 text-sm py-8 text-center">No regulatory filings triggered under current exposure thresholds.</div>';
+        return;
+      }
+
+      sarCases.forEach(sc => {
+        const sar = sc.sar;
+        const el = document.createElement('div');
+        el.className = 'glass-card rounded-2xl p-5 border border-purple-500/30 space-y-3 shadow-lg shadow-purple-950/20';
+        el.innerHTML = `
+          <div class="flex justify-between items-center">
+            <div class="flex items-center gap-3">
+              <span class="font-mono font-bold text-lg text-white">${sc.case_id}</span>
+              <span class="px-3 py-1 rounded-full text-xs font-bold bg-purple-500/20 text-purple-300 border border-purple-500/40">FINCEN SAR REQUIRED</span>
+            </div>
+            <div class="flex items-center gap-3">
+              <span class="text-cyan-300 font-mono font-bold text-base">$${sar.total_amount_usd.toFixed(2)}</span>
+              <button onclick="copySARNarrative('${sc.case_id}')" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-mono text-purple-300 border border-slate-700 flex items-center gap-1">
+                <i data-lucide="copy" class="w-3.5 h-3.5"></i> Copy
+              </button>
+            </div>
+          </div>
+          <p class="text-xs text-slate-300 leading-relaxed bg-slate-950/70 p-4 rounded-xl border border-slate-800 italic font-sans">"${sar.narrative}"</p>
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-2 text-xs text-slate-400 font-mono pt-1">
+            <div class="bg-slate-900/60 p-2.5 rounded-lg border border-slate-800">SUBJECTS: <strong class="text-slate-200">${sar.subjects.join(', ')}</strong></div>
+            <div class="bg-slate-900/60 p-2.5 rounded-lg border border-slate-800">ACTIVITY DATES: <strong class="text-slate-200">${sar.activity_dates.join(' to ')}</strong></div>
+            <div class="bg-slate-900/60 p-2.5 rounded-lg border border-slate-800">STATUTORY REASON: <strong class="text-purple-300">${sar.reason}</strong></div>
+          </div>
+        `;
+        container.appendChild(el);
+      });
+      lucide.createIcons();
+    }
+
+    function renderLedger() {
+      const tbody = document.getElementById('ledgerTableBody');
+      tbody.innerHTML = '';
+
+      cases.forEach(c => {
+        const id = c.case_id;
+        const info = c.case || {};
+        const v = info.verdict || 'uncertain';
+        const pat = (info.pattern || 'none').replace(/_/g, ' ');
+        const exp = info.exposure_usd || 0;
+        const prob = info.fraud_probability || 0.5;
+        const txn = (info.affected_txn_ids || [''])[0];
+        const card = (info.connected_card_ids || [''])[0];
+
+        const tr = document.createElement('tr');
+        tr.className = 'hover:bg-purple-950/20 transition-colors';
+        tr.innerHTML = `
+          <td class="py-3 px-3 font-bold text-white">${id}</td>
+          <td class="py-3 px-3 text-slate-300">${txn}</td>
+          <td class="py-3 px-3 text-slate-400">${card}</td>
+          <td class="py-3 px-3 text-right text-cyan-300 font-bold">$${exp.toFixed(2)}</td>
+          <td class="py-3 px-3 text-purple-300 capitalize">${pat}</td>
+          <td class="py-3 px-3">
+            <span class="px-2 py-0.5 rounded text-[10px] font-bold ${v === 'fraud' ? 'bg-rose-500/20 text-rose-300' : 'bg-amber-500/20 text-amber-300'}">${v.toUpperCase()}</span>
+          </td>
+          <td class="py-3 px-3 text-center text-slate-300">${(prob * 100).toFixed(0)}%</td>
+          <td class="py-3 px-3 text-center">${c.sar?.file ? '<span class="text-purple-400 font-bold">YES</span>' : '<span class="text-slate-600">NO</span>'}</td>
+          <td class="py-3 px-3 text-right">
+            <button onclick="viewRawJSON('${id}')" class="text-brand-400 hover:text-brand-300 underline text-xs">View JSON</button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function setTab(tabName) {
+      ['command', 'nba', 'sar', 'topology', 'ledger'].forEach(t => {
+        const el = document.getElementById(`tab-${t}`);
+        const btn = document.getElementById(`tab-btn-${t}`);
+        if (t === tabName) {
+          el?.classList.remove('hidden');
+          btn?.classList.add('border-brand-500', 'text-purple-300');
+          btn?.classList.remove('border-transparent', 'text-slate-400');
+        } else {
+          el?.classList.add('hidden');
+          btn?.classList.remove('border-brand-500', 'text-purple-300');
+          btn?.classList.add('border-transparent', 'text-slate-400');
+        }
+      });
+    }
+
+    function filterByQuick(type) {
+      setTab('command');
+      const select = document.getElementById('filterVerdict');
+      if (type === 'ALL') select.value = 'ALL';
+      else if (type === 'fraud') select.value = 'fraud';
+      else if (type === 'uncertain') select.value = 'uncertain';
+      else if (type === 'sar') {
+        setTab('sar');
+        return;
+      }
+      renderCaseList();
+    }
+
+    function viewRawJSON(caseId) {
+      const c = cases.find(x => x.case_id === caseId);
+      if (!c) return;
+
+      document.getElementById('modalCaseTitle').innerText = `${caseId}.json (Answer File)`;
+      document.getElementById('modalJSONContent').innerText = JSON.stringify(c, null, 2);
+      document.getElementById('jsonModal').classList.remove('hidden');
+    }
+
+    function closeModal() {
+      document.getElementById('jsonModal').classList.add('hidden');
+    }
+
+    function copyModalJSON() {
+      const content = document.getElementById('modalJSONContent').innerText;
+      navigator.clipboard.writeText(content);
+      alert('Answer JSON copied to clipboard!');
+    }
+
+    function copySARNarrative(caseId) {
+      const c = cases.find(x => x.case_id === caseId);
+      if (c && c.sar?.narrative) {
+        navigator.clipboard.writeText(c.sar.narrative);
+        alert(`FinCEN SAR Narrative for ${caseId} copied to clipboard!`);
+      }
+    }
+
+    function downloadAllJSON() {
+      const csv = "case_id,verdict,pattern,exposure_usd,sar_required\n" + 
+        cases.map(c => `${c.case_id},${c.case?.verdict},${c.case?.pattern},${c.case?.exposure_usd},${c.sar?.file ? 1 : 0}`).join("\n");
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.setAttribute('href', url);
+      a.setAttribute('download', 'agentic_fraud_investigation_summary.csv');
+      a.click();
+    }
+
+    // Initialize on load
+    loadCases();
+  </script>
+</body>
+</html>

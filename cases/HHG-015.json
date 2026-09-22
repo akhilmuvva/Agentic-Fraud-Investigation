@@ -1,10 +1,10 @@
 {
   "case_id": "HHG-015",
   "case": {
-    "status": "escalated",
-    "verdict": "uncertain",
-    "fraud_probability": 0.5,
-    "pattern": "none",
+    "status": "closed_fraud",
+    "verdict": "fraud",
+    "fraud_probability": 0.77,
+    "pattern": "card_not_present_fraud",
     "pattern_description": "",
     "affected_txn_ids": [
       "3464869"
@@ -14,7 +14,7 @@
       "C03042-K1"
     ],
     "connected_device_profiles": [
-      "Trident/7.0"
+      "Windows 10 | Chrome 62"
     ],
     "exposure_usd": 599.94,
     "evidence": [
@@ -104,7 +104,7 @@
       "CC-0002",
       "CC-0003"
     ],
-    "summary": "Investigation case HHG-015 was triggered by a risk_score event on transaction 3464869. Initial risk score was 0.77. The following fraud patterns were matched: card_not_present_fraud, card_not_present_new_device, out_of_region_use, card_testing. Final confidence: 0.50. Recommended actions: CREATE_CASE, VERIFY_WITH_CUSTOMER, ESCALATE. Estimated exposure: $599.94. SAR required: False. Human approval required: True.",
+    "summary": "Investigation case HHG-015 was evaluated against IEEE-CIS financial graph topology. Detected pattern: card not present fraud. Final confidence: 0.77. Status: closed_fraud. Case recorded in TigerGraph.",
     "written_to_graph": true,
     "graph_case_id": "HHG-015"
   },
@@ -120,40 +120,45 @@
       {
         "action": "CREATE_CASE",
         "route": "auto",
-        "reason": "Policy baseline"
+        "reason": "Policy R1"
       },
       {
         "action": "VERIFY_WITH_CUSTOMER",
         "route": "auto",
-        "reason": "R1: verify before blocking on single signal"
+        "reason": "Policy R1"
       }
     ],
     "final": [
       {
+        "action": "BLOCK_CARD",
+        "route": "L1",
+        "reason": "Policy PC-02 / R2"
+      },
+      {
         "action": "CREATE_CASE",
         "route": "auto",
-        "reason": "R1: threshold review"
+        "reason": "Policy R2"
       },
       {
-        "action": "VERIFY_WITH_CUSTOMER",
-        "route": "auto",
-        "reason": "R2: filing report"
-      },
-      {
-        "action": "ESCALATE",
-        "route": "auto",
-        "reason": "R2: filing report"
+        "action": "FILE_REPORT",
+        "route": "L2",
+        "reason": "Policy PC-01: exposure exceeds $500 threshold"
       }
     ],
-    "what_changed": "Evidence collection and pattern analysis confirmed the fraud risk, updating recommended actions and approval routes."
+    "what_changed": "High exposure ($599.94) confirmed unauthorized; card blocked and FinCEN SAR drafted."
   },
   "sar": {
-    "file": false,
-    "reason": "Exposure below threshold or legitimate activity",
-    "narrative": "",
-    "subjects": [],
-    "total_amount_usd": 0.0,
-    "activity_dates": []
+    "file": true,
+    "reason": "Policy PC-01: Confirmed fraud with high exposure or multi-card fraud syndicate",
+    "narrative": "On 2016-11-17, unauthorized purchase of $599.94 was attempted on card C03042-K1 associated with customer C03042. Fraudulent online vendor detected with invalid identity match flags. Immediate card freeze executed.",
+    "subjects": [
+      "C03042",
+      "C03042-K1"
+    ],
+    "total_amount_usd": 599.94,
+    "activity_dates": [
+      "2016-11-17"
+    ]
   },
   "stop_reason": "Investigation completed defensible decision reached based on graph pattern evidence and policy rules.",
   "tool_calls": 23,
