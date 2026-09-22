@@ -1,0 +1,335 @@
+// =============================================================================
+// Utility Query — Suspicious Neighborhood (N-Hop Traversal)
+// Query    : get_suspicious_neighborhood
+// Graph    : FraudInvestigation
+// Author   : TigerGraph Agentic Fraud Investigation
+// Created  : 2026-09-22
+//
+// Logic:
+//   Generic N-hop traversal from a starting Transaction vertex.
+//   Traversal spine (up to 3 hops):
+//     Hop 1: Transaction → Device   (FROM_DEVICE forward)
+//            Transaction ← Card     (USED_BY_CARD reverse)
+//     Hop 2: Device → Transaction   (DEVICE_USED_IN reverse = prior txns)
+//            Card → Customer        (OWNED_BY reverse)
+//     Hop 3: Customer → Card        (OWNS forward — sibling cards)
+//            Transaction → FraudPattern (MATCHED_BY)
+//
+//   At each entity collected, compute:
+//     - entity_type       : "Transaction" | "Device" | "Card" | "Customer"
+//     - entity_id         : primary ID
+//     - fraud_tx_count    : how many of this entity's connected transactions
+//                           have isFraud == 1
+//     - total_tx_count    : total connected transactions
+//     - fraud_ratio       : fraud_tx_count / total_tx_count
+//     - risk_score        : entity's own risk score (Customer) or derived
+//
+//   hops parameter is capped at 3 for performance.
+//   Visited set prevents revisiting the same entity vertex.
+// =============================================================================
+
+USE GRAPH FraudInvestigation
+
+CREATE OR REPLACE QUERY get_suspicious_neighborhood(
+    STRING transaction_id, -- seed transaction primary ID
+    INT    hops            -- number of hops (capped at 3)
+) FOR GRAPH FraudInvestigation
+  SYNTAX V2
+{
+    // -----------------------------------------------------------------------
+    // Tuple and accumulators
+    // -----------------------------------------------------------------------
+    TYPEDEF TUPLE<
+        STRING entity_type,
+        STRING entity_id,
+        INT    fraud_tx_count,
+        INT    total_tx_count,
+        FLOAT  fraud_ratio,
+        FLOAT  risk_score,
+        INT    hop_distance
+    > NeighborTuple;
+
+    ListAccum<NeighborTuple> @@neighborhood;
+    SetAccum<STRING>         @@visited_ids;    -- deduplication set
+    SumAccum<INT>            @@entity_count    = 0;
+
+    // Cap hops at 3 for performance
+    INT effective_hops = CASE WHEN hops > 3 THEN 3 ELSE hops END;
+    IF effective_hops < 1 THEN effective_hops = 1; END;
+
+    // -----------------------------------------------------------------------
+    // Step 0 — Anchor on seed Transaction
+    // -----------------------------------------------------------------------
+    TxSeed = {Transaction.*};
+    SeedTx = SELECT t
+             FROM   TxSeed:t
+             WHERE  t.transaction_id == transaction_id;
+
+    IF SeedTx.size() == 0 THEN
+        PRINT "Transaction not found: " + transaction_id;
+        RETURN;
+    END;
+
+    // Mark seed as visited
+    @@visited_ids += transaction_id;
+
+    // Seed fraud stats (the transaction itself)
+    _ = SELECT t
+        FROM SeedTx:t
+        ACCUM
+            INT self_fraud = CASE WHEN t.isFraud == 1 THEN 1 ELSE 0 END,
+            @@neighborhood += NeighborTuple(
+                "Transaction",
+                t.transaction_id,
+                self_fraud,
+                1,
+                self_fraud * 1.0,
+                t.bank_risk_score,
+                0   -- hop 0 = seed
+            ),
+            @@entity_count += 1;
+
+    // -----------------------------------------------------------------------
+    // Hop 1 — Transaction → Device (FROM_DEVICE)
+    //          Transaction ← Card  (USED_BY_CARD reverse edge)
+    // -----------------------------------------------------------------------
+    Hop1Devices = SELECT dv
+        FROM SeedTx:t -(FROM_DEVICE:ed)- Device:dv
+        WHERE NOT @@visited_ids.contains(dv.device_id)
+        ACCUM
+            // Count fraud transactions this device has been used in
+            SumAccum<INT> @fraud_cnt  = 0,
+            SumAccum<INT> @total_cnt  = 0;
+
+    // Compute per-device fraud stats via back-traversal
+    _ = SELECT pt
+        FROM Hop1Devices:dv -(DEVICE_USED_IN:er)- Transaction:pt
+        ACCUM
+            dv.@total_cnt += 1,
+            IF pt.isFraud == 1 THEN dv.@fraud_cnt += 1 END;
+
+    // Record devices into neighborhood
+    _ = SELECT dv
+        FROM Hop1Devices:dv
+        ACCUM
+            IF NOT @@visited_ids.contains(dv.device_id) THEN
+                @@neighborhood += NeighborTuple(
+                    "Device",
+                    dv.device_id,
+                    dv.@fraud_cnt,
+                    dv.@total_cnt,
+                    CASE
+                        WHEN dv.@total_cnt > 0
+                        THEN dv.@fraud_cnt * 1.0 / dv.@total_cnt
+                        ELSE 0.0
+                    END,
+                    -- Device risk approximated by fraud ratio
+                    CASE
+                        WHEN dv.@total_cnt > 0
+                        THEN dv.@fraud_cnt * 1.0 / dv.@total_cnt
+                        ELSE 0.0
+                    END,
+                    1
+                ),
+                @@visited_ids += dv.device_id,
+                @@entity_count += 1
+            END;
+
+    // Hop 1b: Seed transaction ← Card (reverse of USED_IN)
+    Hop1Cards = SELECT ca
+        FROM SeedTx:t -(USED_BY_CARD:er)- Card:ca
+        WHERE NOT @@visited_ids.contains(ca.card_id)
+        ACCUM
+            SumAccum<INT> @fraud_cnt  = 0,
+            SumAccum<INT> @total_cnt  = 0;
+
+    // Compute card fraud stats
+    _ = SELECT ct
+        FROM Hop1Cards:ca -(USED_IN:ef)- Transaction:ct
+        ACCUM
+            ca.@total_cnt += 1,
+            IF ct.isFraud == 1 THEN ca.@fraud_cnt += 1 END;
+
+    _ = SELECT ca
+        FROM Hop1Cards:ca
+        ACCUM
+            IF NOT @@visited_ids.contains(ca.card_id) THEN
+                @@neighborhood += NeighborTuple(
+                    "Card",
+                    ca.card_id,
+                    ca.@fraud_cnt,
+                    ca.@total_cnt,
+                    CASE
+                        WHEN ca.@total_cnt > 0
+                        THEN ca.@fraud_cnt * 1.0 / ca.@total_cnt
+                        ELSE 0.0
+                    END,
+                    CASE
+                        WHEN ca.@total_cnt > 0
+                        THEN ca.@fraud_cnt * 1.0 / ca.@total_cnt
+                        ELSE 0.0
+                    END,
+                    1
+                ),
+                @@visited_ids += ca.card_id,
+                @@entity_count += 1
+            END;
+
+    IF effective_hops < 2 THEN
+        GOTO output;
+    END;
+
+    // -----------------------------------------------------------------------
+    // Hop 2 — Device → Transactions (sibling fraud on same device)
+    //          Card  → Customer (OWNED_BY reverse)
+    // -----------------------------------------------------------------------
+
+    // Hop 2a: Sibling transactions via Device
+    IF Hop1Devices.size() > 0 THEN
+        Hop2DeviceTxns = SELECT pt
+            FROM Hop1Devices:dv -(DEVICE_USED_IN:er)- Transaction:pt
+            WHERE NOT @@visited_ids.contains(pt.transaction_id)
+                  AND pt.transaction_id != transaction_id
+            ACCUM
+                IF NOT @@visited_ids.contains(pt.transaction_id) THEN
+                    @@neighborhood += NeighborTuple(
+                        "Transaction",
+                        pt.transaction_id,
+                        CASE WHEN pt.isFraud == 1 THEN 1 ELSE 0 END,
+                        1,
+                        CASE WHEN pt.isFraud == 1 THEN 1.0 ELSE 0.0 END,
+                        pt.bank_risk_score,
+                        2
+                    ),
+                    @@visited_ids += pt.transaction_id,
+                    @@entity_count += 1
+                END;
+    END;
+
+    // Hop 2b: Card → Customer (reverse of OWNS)
+    IF Hop1Cards.size() > 0 THEN
+        Hop2Customers = SELECT cu
+            FROM Hop1Cards:ca -(OWNED_BY:er)- Customer:cu
+            WHERE NOT @@visited_ids.contains(cu.customer_id)
+            ACCUM
+                SumAccum<INT> @fraud_cnt  = 0,
+                SumAccum<INT> @total_cnt  = 0;
+
+        // Customer fraud stats: all transactions across all their cards
+        _ = SELECT ct
+            FROM Hop2Customers:cu -(OWNS:eo)- Card:ca2 -(USED_IN:ef)- Transaction:ct
+            ACCUM
+                cu.@total_cnt += 1,
+                IF ct.isFraud == 1 THEN cu.@fraud_cnt += 1 END;
+
+        _ = SELECT cu
+            FROM Hop2Customers:cu
+            ACCUM
+                IF NOT @@visited_ids.contains(cu.customer_id) THEN
+                    @@neighborhood += NeighborTuple(
+                        "Customer",
+                        cu.customer_id,
+                        cu.@fraud_cnt,
+                        cu.@total_cnt,
+                        CASE
+                            WHEN cu.@total_cnt > 0
+                            THEN cu.@fraud_cnt * 1.0 / cu.@total_cnt
+                            ELSE 0.0
+                        END,
+                        cu.risk_score,
+                        2
+                    ),
+                    @@visited_ids += cu.customer_id,
+                    @@entity_count += 1
+                END;
+    END;
+
+    IF effective_hops < 3 THEN
+        GOTO output;
+    END;
+
+    // -----------------------------------------------------------------------
+    // Hop 3 — Customer → sibling Cards (OWNS)
+    //          Transaction → FraudPattern (MATCHED_BY)
+    // -----------------------------------------------------------------------
+
+    // We need the hop-2 customer set for hop-3 traversal
+    Hop3CardSeed = {Customer.*};
+    Hop3Customers = SELECT cu
+                    FROM   Hop3CardSeed:cu
+                    WHERE  @@visited_ids.contains(cu.customer_id)
+                           AND cu.customer_id != "";
+
+    // Hop 3a: Customer → sibling Cards
+    IF Hop3Customers.size() > 0 THEN
+        Hop3SiblingCards = SELECT ca3
+            FROM Hop3Customers:cu -(OWNS:eo)- Card:ca3
+            WHERE NOT @@visited_ids.contains(ca3.card_id)
+            ACCUM
+                SumAccum<INT> @fraud_cnt  = 0,
+                SumAccum<INT> @total_cnt  = 0;
+
+        _ = SELECT ct3
+            FROM Hop3SiblingCards:ca3 -(USED_IN:ef)- Transaction:ct3
+            ACCUM
+                ca3.@total_cnt += 1,
+                IF ct3.isFraud == 1 THEN ca3.@fraud_cnt += 1 END;
+
+        _ = SELECT ca3
+            FROM Hop3SiblingCards:ca3
+            ACCUM
+                IF NOT @@visited_ids.contains(ca3.card_id) THEN
+                    @@neighborhood += NeighborTuple(
+                        "Card",
+                        ca3.card_id,
+                        ca3.@fraud_cnt,
+                        ca3.@total_cnt,
+                        CASE
+                            WHEN ca3.@total_cnt > 0
+                            THEN ca3.@fraud_cnt * 1.0 / ca3.@total_cnt
+                            ELSE 0.0
+                        END,
+                        CASE
+                            WHEN ca3.@total_cnt > 0
+                            THEN ca3.@fraud_cnt * 1.0 / ca3.@total_cnt
+                            ELSE 0.0
+                        END,
+                        3
+                    ),
+                    @@visited_ids += ca3.card_id,
+                    @@entity_count += 1
+                END;
+    END;
+
+    // Hop 3b: Seed Transaction → FraudPattern (MATCHED_BY)
+    _ = SELECT fp
+        FROM SeedTx:t -(MATCHED_BY:em)- FraudPattern:fp
+        WHERE NOT @@visited_ids.contains(fp.pattern_id)
+        ACCUM
+            @@neighborhood += NeighborTuple(
+                "FraudPattern",
+                fp.pattern_id,
+                0,
+                0,
+                0.0,
+                1.0,   -- FraudPattern always carries max risk signal
+                3
+            ),
+            @@visited_ids += fp.pattern_id,
+            @@entity_count += 1;
+
+    // -----------------------------------------------------------------------
+    // Output label
+    // -----------------------------------------------------------------------
+    output:
+
+    // -----------------------------------------------------------------------
+    // Return results
+    // -----------------------------------------------------------------------
+    PRINT transaction_id    AS seed_transaction_id;
+    PRINT effective_hops    AS effective_hops_used;
+    PRINT @@entity_count    AS total_entities_collected;
+    PRINT @@neighborhood    AS neighborhood_entities;
+}
+
+INSTALL QUERY get_suspicious_neighborhood

@@ -1,0 +1,184 @@
+// =============================================================================
+// Pattern 2 — Account Takeover
+// Query    : detect_account_takeover
+// Graph    : FraudInvestigation
+// Author   : TigerGraph Agentic Fraud Investigation
+// Created  : 2026-09-22
+//
+// Logic:
+//   1. Walk Customer → Card → Transaction within lookback_days.
+//   2. Separate transactions into historical baseline (all but last N) and
+//      recent (last 30 days) for comparison.
+//   3. Flag recent transactions that show:
+//        a) New device: Device vertex connected has < 3 prior transactions
+//           from this customer's cards  (proxy for id_15=New / id_16=NotFound)
+//        b) R_emaildomain change: recipient domain differs from historical mode
+//        c) Name mismatch: M4 != "M"
+//        d) Amount spike: TransactionAmt > 2× historical average
+//   4. Return suspicious transactions with evidence per flag.
+// =============================================================================
+
+USE GRAPH FraudInvestigation
+
+CREATE OR REPLACE QUERY detect_account_takeover(
+    STRING customer_id,  -- customer vertex primary ID to investigate
+    INT    lookback_days -- scanning window in days
+) FOR GRAPH FraudInvestigation
+  SYNTAX V2
+{
+    // -----------------------------------------------------------------------
+    // Accumulators
+    // -----------------------------------------------------------------------
+    TYPEDEF TUPLE<
+        FLOAT  risk_score,
+        STRING transaction_id,
+        FLOAT  TransactionAmt,
+        STRING device_id,
+        BOOL   new_device_flag,
+        BOOL   email_change_flag,
+        BOOL   name_mismatch_flag,
+        BOOL   amount_spike_flag,
+        STRING r_emaildomain,
+        STRING historical_r_emaildomain,
+        FLOAT  historical_avg_amt
+    > AtoTuple;
+
+    HeapAccum<AtoTuple>(10, DESC, risk_score) @@suspicious_txns;
+
+    // Historical baseline accumulators
+    SumAccum<FLOAT> @@hist_amt_total      = 0.0;
+    SumAccum<INT>   @@hist_tx_count       = 0;
+    MapAccum<STRING, INT> @@email_freq;          -- R_emaildomain frequency map
+    MaxAccum<INT>   @@max_dt              = 0;
+    SumAccum<INT>   @@alert_count         = 0;
+
+    // -----------------------------------------------------------------------
+    // Step 0 — Anchor on target Customer
+    // -----------------------------------------------------------------------
+    Seed = {Customer.*};
+    TargetCustomer = SELECT cu
+                     FROM   Seed:cu
+                     WHERE  cu.customer_id == customer_id;
+
+    IF TargetCustomer.size() == 0 THEN
+        PRINT "Customer not found: " + customer_id;
+        RETURN;
+    END;
+
+    // -----------------------------------------------------------------------
+    // Step 1 — Collect ALL transactions for this customer's cards
+    // -----------------------------------------------------------------------
+    // Two hops: Customer -OWNS-> Card -USED_IN-> Transaction
+    AllCards = SELECT ca
+               FROM   TargetCustomer:cu -(OWNS:e1)- Card:ca;
+
+    INT lookback_seconds = lookback_days * 86400;
+
+    // Pass A: find max TransactionDT for window anchoring
+    AllTxns = SELECT t
+              FROM   AllCards:ca -(USED_IN:e2)- Transaction:t
+              ACCUM  @@max_dt += t.TransactionDT;
+
+    INT window_start  = @@max_dt - lookback_seconds;
+    INT recent_cutoff = @@max_dt - (30 * 86400);  -- "recent" = last 30 days
+
+    // Pass B: build historical baseline (older than recent_cutoff)
+    HistTxns = SELECT t
+               FROM   AllCards:ca -(USED_IN:e2)- Transaction:t
+               WHERE  t.TransactionDT < recent_cutoff
+               ACCUM
+                   @@hist_amt_total  += t.TransactionAmt,
+                   @@hist_tx_count   += 1,
+                   @@email_freq      += (t.R_emaildomain -> 1);
+
+    FLOAT hist_avg = CASE
+                         WHEN @@hist_tx_count > 0
+                         THEN @@hist_amt_total / @@hist_tx_count
+                         ELSE 0.0
+                     END;
+
+    // Determine modal historical R_emaildomain
+    MaxAccum<INT>    @@max_email_freq   = 0;
+    STRING           hist_email_mode    = "";
+    FOREACH (domain, cnt) IN @@email_freq DO
+        IF cnt > @@max_email_freq THEN
+            @@max_email_freq = cnt;
+            hist_email_mode  = domain;
+        END;
+    END;
+
+    // -----------------------------------------------------------------------
+    // Step 2 — Evaluate recent transactions against baseline
+    // -----------------------------------------------------------------------
+    RecentTxns = SELECT t
+        FROM AllCards:ca -(USED_IN:e2)- Transaction:t
+        WHERE t.TransactionDT >= recent_cutoff
+              AND t.TransactionDT >= window_start
+        ACCUM
+            // --- Device newness check ---
+            // Count how many transactions that device has seen from this card set
+            INT device_prior_count = 0,
+            STRING dev_id = "",
+
+            // Traverse Transaction -> Device -> back to prior transactions
+            FOREACH d IN SELECT dv FROM t -(FROM_DEVICE:ed)- Device:dv DO
+                dev_id = d.device_id,
+                // Count prior transactions from this device
+                FOREACH pt IN SELECT pt2
+                              FROM dv -(DEVICE_USED_IN:er)- Transaction:pt2
+                              WHERE pt2.TransactionDT < t.TransactionDT
+                DO
+                    device_prior_count = device_prior_count + 1;
+                END;
+            END,
+
+            BOOL new_device   = (device_prior_count < 3),
+
+            // --- Email domain change ---
+            BOOL email_change = (t.R_emaildomain != hist_email_mode
+                                 AND hist_email_mode != ""),
+
+            // --- Name mismatch ---
+            BOOL name_mismatch = (t.M4 != "M"),
+
+            // --- Amount spike ---
+            BOOL amount_spike = (hist_avg > 0.0
+                                 AND t.TransactionAmt > (2.0 * hist_avg)),
+
+            // --- Composite risk score ---
+            FLOAT risk = 0.0,
+            IF new_device     THEN risk = risk + 0.35 END,
+            IF email_change   THEN risk = risk + 0.25 END,
+            IF name_mismatch  THEN risk = risk + 0.20 END,
+            IF amount_spike   THEN risk = risk + 0.20 END,
+
+            IF risk > 0.0 THEN
+                @@suspicious_txns += AtoTuple(
+                    CASE WHEN risk > 1.0 THEN 1.0 ELSE risk END,
+                    t.transaction_id,
+                    t.TransactionAmt,
+                    dev_id,
+                    new_device,
+                    email_change,
+                    name_mismatch,
+                    amount_spike,
+                    t.R_emaildomain,
+                    hist_email_mode,
+                    hist_avg
+                ),
+                @@alert_count += 1
+            END;
+
+    // -----------------------------------------------------------------------
+    // Step 3 — Return results
+    // -----------------------------------------------------------------------
+    PRINT customer_id           AS queried_customer_id;
+    PRINT lookback_days         AS lookback_days_used;
+    PRINT @@hist_tx_count       AS historical_baseline_tx_count;
+    PRINT hist_avg              AS historical_average_amount;
+    PRINT hist_email_mode       AS historical_r_emaildomain_mode;
+    PRINT @@alert_count         AS suspicious_recent_transactions;
+    PRINT @@suspicious_txns     AS suspicious_transactions;
+}
+
+INSTALL QUERY detect_account_takeover

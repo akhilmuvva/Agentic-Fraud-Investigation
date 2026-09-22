@@ -1,0 +1,177 @@
+// =============================================================================
+// Utility Query — Find Similar Cases via Cosine Similarity
+// Query    : find_similar_cases
+// Graph    : FraudInvestigation
+// Author   : TigerGraph Agentic Fraud Investigation
+// Created  : 2026-09-22
+//
+// Logic:
+//   Performs an in-graph cosine similarity search over all Case vertices
+//   using the pre-computed summary_embedding (LIST<DOUBLE>, 768-dim from
+//   Google text-embedding-004).
+//
+//   Cosine similarity formula:
+//     sim(A, B) = dot(A, B) / (||A|| * ||B||)
+//
+//   All arithmetic is done inline in GSQL using ListAccum iteration.
+//   Results are returned as a top-k heap ordered by descending similarity.
+//
+//   NOTE: For production at scale, replace this brute-force scan with
+//   TigerGraph's native vector index (CREATE VECTOR INDEX) once available
+//   on your Savanna instance. This query is intentionally self-contained
+//   so it works on any TigerGraph 3.x/4.x instance without extensions.
+// =============================================================================
+
+USE GRAPH FraudInvestigation
+
+CREATE OR REPLACE QUERY find_similar_cases(
+    LIST<DOUBLE> query_embedding, -- query vector (must be 768-dim)
+    INT          top_k            -- number of top results to return
+) FOR GRAPH FraudInvestigation
+  SYNTAX V2
+{
+    // -----------------------------------------------------------------------
+    // Tuple and accumulators
+    // -----------------------------------------------------------------------
+    TYPEDEF TUPLE<
+        FLOAT  similarity_score,
+        STRING case_id,
+        STRING outcome,
+        STRING pattern_matched,
+        FLOAT  confidence_score,
+        FLOAT  exposure_usd,
+        INT    sar_required,
+        STRING status,
+        STRING summary_text
+    > SimilarCaseTuple;
+
+    HeapAccum<SimilarCaseTuple>(top_k, DESC, similarity_score) @@similar_cases;
+    SumAccum<INT> @@cases_scanned = 0;
+
+    // Pre-compute query vector norms to avoid repeating inside vertex loop
+    // ||query|| = sqrt(sum of squares of query_embedding components)
+    DOUBLE query_norm_sq = 0.0;
+    FOREACH val IN query_embedding DO
+        query_norm_sq = query_norm_sq + val * val;
+    END;
+    DOUBLE query_norm = sqrt(query_norm_sq);
+
+    // Guard against zero-vector query
+    IF query_norm == 0.0 THEN
+        PRINT "query_embedding must be a non-zero vector.";
+        RETURN;
+    END;
+
+    // Guard against invalid top_k
+    IF top_k <= 0 THEN
+        top_k = 10;
+    END;
+
+    // -----------------------------------------------------------------------
+    // Step 1 — Scan all Case vertices, compute cosine similarity inline
+    // -----------------------------------------------------------------------
+    AllCases = {Case.*};
+
+    _ = SELECT c
+        FROM AllCases:c
+        ACCUM
+            // Skip cases with no embedding
+            IF c.summary_embedding.size() == 0 THEN
+                // no-op — skip
+                INT _skip = 0
+            ELSE
+                @@cases_scanned += 1,
+
+                // --- Dot product ---
+                DOUBLE dot_product  = 0.0,
+                DOUBLE doc_norm_sq  = 0.0,
+                INT    embed_len    = c.summary_embedding.size(),
+                INT    query_len    = query_embedding.size(),
+
+                // Use the shorter length to avoid index-out-of-bounds
+                INT    min_len      = CASE
+                                          WHEN embed_len < query_len
+                                          THEN embed_len
+                                          ELSE query_len
+                                      END,
+
+                // Iterate and accumulate dot product and document norm
+                // GSQL V2 doesn't have indexed list access, so we use
+                // parallel iteration via a zip-style approach with two
+                // separate foreach loops and a position counter.
+                // We compute doc_norm from the case embedding unconditionally.
+                FOREACH val IN c.summary_embedding DO
+                    doc_norm_sq = doc_norm_sq + val * val
+                END,
+
+                // For the dot product, we iterate query_embedding and
+                // pair with the case embedding using GSQL's
+                // built-in zip behaviour.
+                // NOTE: GSQL V2 does NOT have indexed list access (list[i]).
+                // We use a workaround: convert both lists to a MapAccum
+                // via a counter, then iterate the map.
+                // To keep this self-contained, we use the following idiom:
+                //   iterate query_embedding with position counter, then
+                //   iterate case embedding with position counter,
+                //   storing each in a map, then compute dot product from maps.
+
+                MapAccum<INT, DOUBLE> @q_map,
+                MapAccum<INT, DOUBLE> @d_map,
+                INT @q_idx = 0,
+                INT @d_idx = 0,
+
+                FOREACH qval IN query_embedding DO
+                    @q_map += (@q_idx -> qval),
+                    @q_idx += 1
+                END,
+
+                FOREACH dval IN c.summary_embedding DO
+                    @d_map += (@d_idx -> dval),
+                    @d_idx += 1
+                END,
+
+                // Now compute dot product from the two index maps
+                FOREACH (idx, qv) IN @q_map DO
+                    IF @d_map.containsKey(idx) THEN
+                        dot_product = dot_product + qv * @d_map.get(idx)
+                    END
+                END,
+
+                // --- Cosine similarity ---
+                DOUBLE doc_norm = sqrt(doc_norm_sq),
+                DOUBLE cosine_sim = CASE
+                    WHEN doc_norm == 0.0 OR query_norm == 0.0
+                    THEN 0.0
+                    ELSE dot_product / (query_norm * doc_norm)
+                END,
+
+                // Clamp to [-1, 1] to handle floating-point drift
+                DOUBLE clamped_sim = CASE
+                    WHEN cosine_sim > 1.0  THEN 1.0
+                    WHEN cosine_sim < -1.0 THEN -1.0
+                    ELSE cosine_sim
+                END,
+
+                // Accumulate into heap
+                @@similar_cases += SimilarCaseTuple(
+                    clamped_sim,
+                    c.case_id,
+                    c.outcome,
+                    c.pattern_matched,
+                    c.confidence_score,
+                    c.exposure_usd,
+                    c.sar_required,
+                    c.status,
+                    c.summary_text
+                )
+            END;
+
+    // -----------------------------------------------------------------------
+    // Step 2 — Return results
+    // -----------------------------------------------------------------------
+    PRINT top_k             AS top_k_requested;
+    PRINT @@cases_scanned   AS total_cases_scanned;
+    PRINT @@similar_cases   AS similar_cases;
+}
+
+INSTALL QUERY find_similar_cases

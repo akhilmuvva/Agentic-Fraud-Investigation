@@ -1,0 +1,148 @@
+// =============================================================================
+// Pattern 3 — Card-Not-Present + New Device Combo
+// Query    : detect_card_not_present_new_device
+// Graph    : FraudInvestigation
+// Author   : TigerGraph Agentic Fraud Investigation
+// Created  : 2026-09-22
+//
+// Logic:
+//   1. Walk Card → Transaction within lookback_days.
+//   2. Filter to CNP product codes (W, H, C, S).
+//   3. For each CNP transaction, traverse Transaction → Device.
+//   4. Determine "newness" of that Device for this card:
+//        prior_tx_count = number of prior transactions on this card
+//                         that used the same Device vertex.
+//   5. Flag device as "new" if prior_tx_count < 2.
+//   6. Newness score = 1.0 − (prior_tx_count / 10), clamped [0,1].
+//   7. Return device_id, transaction_ids, newness_score per device.
+// =============================================================================
+
+USE GRAPH FraudInvestigation
+
+CREATE OR REPLACE QUERY detect_card_not_present_new_device(
+    STRING card_id,      -- card vertex primary ID to investigate
+    INT    lookback_days -- window in days
+) FOR GRAPH FraudInvestigation
+  SYNTAX V2
+{
+    // -----------------------------------------------------------------------
+    // Tuple and accumulators
+    // -----------------------------------------------------------------------
+    TYPEDEF TUPLE<
+        FLOAT  newness_score,
+        STRING device_id,
+        STRING transaction_id,
+        FLOAT  transaction_amt,
+        STRING product_cd,
+        INT    prior_tx_count_on_card,
+        STRING device_type,
+        STRING device_info
+    > CnpNewDeviceTuple;
+
+    HeapAccum<CnpNewDeviceTuple>(10, DESC, newness_score) @@flagged_results;
+
+    SumAccum<INT> @@total_cnp_scanned  = 0;
+    SumAccum<INT> @@total_new_device   = 0;
+    MaxAccum<INT> @@max_dt             = 0;
+
+    // -----------------------------------------------------------------------
+    // Step 0 — Anchor on the target Card
+    // -----------------------------------------------------------------------
+    Seed = {Card.*};
+    TargetCard = SELECT c
+                 FROM   Seed:c
+                 WHERE  c.card_id == card_id;
+
+    IF TargetCard.size() == 0 THEN
+        PRINT "Card not found: " + card_id;
+        RETURN;
+    END;
+
+    // -----------------------------------------------------------------------
+    // Step 1 — Find max TransactionDT for windowing
+    // -----------------------------------------------------------------------
+    AllTxns = SELECT t
+              FROM   TargetCard:c -(USED_IN:e)- Transaction:t
+              ACCUM  @@max_dt += t.TransactionDT;
+
+    INT lookback_seconds = lookback_days * 86400;
+    INT window_start     = @@max_dt - lookback_seconds;
+
+    // -----------------------------------------------------------------------
+    // Step 2 — Collect all Transactions on this Card (full history for
+    //           device-prior-count calculation, but only flag windowed ones)
+    // -----------------------------------------------------------------------
+
+    // Get FULL transaction set per device to compute prior counts
+    // We build: Device → count of transactions using it from this card
+    MapAccum<STRING, INT> @@device_tx_count;  -- device_id -> total tx count on this card
+
+    AllCardTxns = SELECT t
+                  FROM   TargetCard:c -(USED_IN:e)- Transaction:t;
+
+    // For each transaction, get its device and increment counter
+    _ = SELECT dv
+        FROM   AllCardTxns:t -(FROM_DEVICE:ed)- Device:dv
+        ACCUM  @@device_tx_count += (dv.device_id -> 1);
+
+    // -----------------------------------------------------------------------
+    // Step 3 — Walk CNP transactions within window, check device newness
+    // -----------------------------------------------------------------------
+    CnpWindowTxns = SELECT t
+        FROM TargetCard:c -(USED_IN:e)- Transaction:t
+        WHERE
+            t.TransactionDT >= window_start
+            AND (t.ProductCD == "W"
+                 OR t.ProductCD == "H"
+                 OR t.ProductCD == "C"
+                 OR t.ProductCD == "S")
+        ACCUM
+            @@total_cnp_scanned += 1,
+
+            // For this transaction's device, get prior count on THIS card
+            // (subtract 1 to exclude the current transaction itself)
+            FOREACH dv IN SELECT dv2 FROM t -(FROM_DEVICE:ed)- Device:dv2 DO
+                INT total_cnt = CASE
+                    WHEN @@device_tx_count.containsKey(dv.device_id)
+                    THEN @@device_tx_count.get(dv.device_id)
+                    ELSE 0
+                END,
+
+                // prior = total - 1 (current tx), floor at 0
+                INT prior_cnt = CASE WHEN total_cnt > 1 THEN total_cnt - 1 ELSE 0 END,
+
+                // Flag if < 2 prior transactions from this device on this card
+                BOOL is_new = (prior_cnt < 2),
+
+                // Newness score: 1.0 when prior=0, 0.9 when prior=1, decays by 0.1
+                FLOAT newness = CASE
+                    WHEN prior_cnt >= 10 THEN 0.0
+                    ELSE 1.0 - (prior_cnt * 0.1)
+                END,
+
+                IF is_new THEN
+                    @@total_new_device += 1,
+                    @@flagged_results += CnpNewDeviceTuple(
+                        newness,
+                        dv.device_id,
+                        t.transaction_id,
+                        t.TransactionAmt,
+                        t.ProductCD,
+                        prior_cnt,
+                        dv.DeviceType,
+                        dv.DeviceInfo
+                    )
+                END
+            END;
+
+    // -----------------------------------------------------------------------
+    // Step 4 — Return results
+    // -----------------------------------------------------------------------
+    PRINT card_id               AS queried_card_id;
+    PRINT lookback_days         AS lookback_days_used;
+    PRINT @@total_cnp_scanned   AS total_cnp_transactions_scanned;
+    PRINT @@total_new_device    AS flagged_new_device_transactions;
+    PRINT @@flagged_results     AS flagged_cnp_new_device_transactions;
+}
+
+INSTALL QUERY detect_card_not_present_new_device

@@ -1,0 +1,165 @@
+// =============================================================================
+// TigerGraph GSQL Schema — FraudInvestigation Graph
+// Project  : TigerGraph Agentic Fraud Investigation (IEEE-CIS / HHGOA)
+// Created  : 2026-09-22
+// =============================================================================
+
+// ---------------------------------------------------------------------------
+// DROP existing graph & types (safe re-run)
+// ---------------------------------------------------------------------------
+USE GLOBAL
+DROP GRAPH FraudInvestigation
+
+// ---------------------------------------------------------------------------
+// VERTEX TYPES
+// ---------------------------------------------------------------------------
+
+// Customer — cardholder identity node
+CREATE VERTEX Customer (
+    PRIMARY_ID customer_id   STRING,
+    addr1                    STRING DEFAULT "",   -- billing region code
+    addr2                    STRING DEFAULT "",   -- billing sub-region code
+    P_emaildomain            STRING DEFAULT "",   -- purchaser email domain
+    risk_score               FLOAT  DEFAULT 0.0, -- rolling risk score [0,1]
+    first_seen               DATETIME,
+    last_seen                DATETIME
+) WITH primary_id_as_attribute="TRUE"
+
+// Card — payment card node
+CREATE VERTEX Card (
+    PRIMARY_ID card_id       STRING,
+    customer_id              STRING DEFAULT "",   -- owning customer reference
+    card1                    STRING DEFAULT "",   -- masked card number prefix
+    card2                    STRING DEFAULT "",   -- card expiry-related field
+    card3                    STRING DEFAULT "",   -- card type descriptor
+    card4                    STRING DEFAULT "",   -- card network (Visa/MC/…)
+    card5                    STRING DEFAULT "",   -- card product code
+    card6                    STRING DEFAULT ""    -- debit/credit flag
+) WITH primary_id_as_attribute="TRUE"
+
+// Transaction — individual payment event
+CREATE VERTEX Transaction (
+    PRIMARY_ID transaction_id STRING,
+    TransactionDT             INT    DEFAULT 0,     -- seconds offset from ref epoch
+    TransactionAmt            FLOAT  DEFAULT 0.0,   -- transaction amount USD
+    ProductCD                 STRING DEFAULT "",    -- product category (W/H/C/S/R)
+    dist1                     FLOAT  DEFAULT 0.0,   -- distance metric 1
+    dist2                     FLOAT  DEFAULT 0.0,   -- distance metric 2
+    P_emaildomain             STRING DEFAULT "",    -- purchaser email domain
+    R_emaildomain             STRING DEFAULT "",    -- recipient email domain
+    bank_risk_score           FLOAT  DEFAULT 0.0,   -- bank-assigned risk score
+    M1                        STRING DEFAULT "",    -- match flag: name on card
+    M2                        STRING DEFAULT "",    -- match flag: address
+    M3                        STRING DEFAULT "",    -- match flag: billing addr
+    M4                        STRING DEFAULT "",    -- match flag: name
+    M5                        STRING DEFAULT "",    -- match flag: email
+    M6                        STRING DEFAULT "",    -- match flag: phone
+    M7                        STRING DEFAULT "",    -- match flag: device
+    M8                        STRING DEFAULT "",    -- match flag: OS
+    M9                        STRING DEFAULT "",    -- match flag: browser
+    C1                        FLOAT  DEFAULT 0.0,   -- count: addresses associated with card
+    C2                        FLOAT  DEFAULT 0.0,   -- count: cards per billing address
+    C6                        FLOAT  DEFAULT 0.0,   -- count: days since last order
+    C13                       FLOAT  DEFAULT 0.0,   -- count: unique devices
+    C14                       FLOAT  DEFAULT 0.0,   -- count: unique emails
+    isFraud                   INT    DEFAULT 0,     -- ground-truth label (0/1)
+    addr1                     STRING DEFAULT "",    -- billing region
+    addr2                     STRING DEFAULT ""     -- billing sub-region
+) WITH primary_id_as_attribute="TRUE"
+
+// Device — physical or virtual device node
+CREATE VERTEX Device (
+    PRIMARY_ID device_id  STRING,
+    DeviceType            STRING DEFAULT "",   -- desktop / mobile / tablet
+    DeviceInfo            STRING DEFAULT "",   -- browser+OS composite string
+    os                    STRING DEFAULT "",   -- normalised OS name
+    browser               STRING DEFAULT ""    -- normalised browser name
+) WITH primary_id_as_attribute="TRUE"
+
+// Case — investigation case record
+CREATE VERTEX Case (
+    PRIMARY_ID case_id          STRING,
+    trigger_type                STRING DEFAULT "",   -- transaction_id / card_id / customer_id
+    trigger_text                STRING DEFAULT "",   -- raw trigger value
+    status                      STRING DEFAULT "open",   -- open / in_progress / closed
+    outcome                     STRING DEFAULT "",   -- fraud_confirmed / cleared / escalated
+    pattern_matched             STRING DEFAULT "",   -- one of the 5 fraud pattern names
+    confidence_score            FLOAT  DEFAULT 0.0, -- [0,1] agent confidence
+    investigation_json          STRING DEFAULT "",   -- full LangGraph trace as JSON string
+    summary_text                STRING DEFAULT "",   -- LLM-generated plain-English summary
+    summary_embedding           LIST<DOUBLE>,        -- text-embedding-004 vector (768-dim)
+    next_action_before          STRING DEFAULT "",   -- recommended action before investigation
+    next_action_after           STRING DEFAULT "",   -- recommended action after investigation
+    exposure_usd                FLOAT  DEFAULT 0.0, -- estimated financial exposure
+    sar_required                INT    DEFAULT 0,   -- SAR filing flag (0/1)
+    created_at                  DATETIME,
+    updated_at                  DATETIME
+) WITH primary_id_as_attribute="TRUE"
+
+// FraudPattern — registry of known fraud pattern definitions
+CREATE VERTEX FraudPattern (
+    PRIMARY_ID pattern_id   STRING,
+    pattern_name            STRING DEFAULT "",   -- e.g. card_not_present_fraud
+    description             STRING DEFAULT "",   -- human-readable description
+    gsql_query              STRING DEFAULT ""    -- installed query name
+) WITH primary_id_as_attribute="TRUE"
+
+// PolicyClause — regulatory / compliance policy snippet
+CREATE VERTEX PolicyClause (
+    PRIMARY_ID clause_id    STRING,
+    clause_text             STRING DEFAULT "",   -- full policy clause text
+    action_required         STRING DEFAULT "",   -- mandated action text
+    threshold               FLOAT  DEFAULT 0.0, -- numeric threshold if applicable
+    clause_embedding        LIST<DOUBLE>         -- text-embedding-004 vector (768-dim)
+) WITH primary_id_as_attribute="TRUE"
+
+// ---------------------------------------------------------------------------
+// EDGE TYPES
+// ---------------------------------------------------------------------------
+
+// Customer owns a Card
+CREATE DIRECTED EDGE OWNS (
+    FROM Customer, TO Card
+) WITH REVERSE_EDGE="OWNED_BY"
+
+// Card was used in a Transaction
+CREATE DIRECTED EDGE USED_IN (
+    FROM Card, TO Transaction,
+    transaction_dt INT DEFAULT 0   -- denormalised for time-range filters
+) WITH REVERSE_EDGE="USED_BY_CARD"
+
+// Transaction originated from a Device
+CREATE DIRECTED EDGE FROM_DEVICE (
+    FROM Transaction, TO Device
+) WITH REVERSE_EDGE="DEVICE_USED_IN"
+
+// Customer is involved in a Case
+CREATE DIRECTED EDGE INVOLVED_IN (
+    FROM Customer, TO Case
+) WITH REVERSE_EDGE="CASE_INVOLVES_CUSTOMER"
+
+// Case involves a Transaction
+CREATE DIRECTED EDGE INVOLVES_TX (
+    FROM Case, TO Transaction
+) WITH REVERSE_EDGE="TX_IN_CASE"
+
+// Case cites a FraudPattern
+CREATE DIRECTED EDGE CITES_PATTERN (
+    FROM Case, TO FraudPattern
+) WITH REVERSE_EDGE="PATTERN_CITED_BY"
+
+// Case cites a PolicyClause
+CREATE DIRECTED EDGE CITES_CLAUSE (
+    FROM Case, TO PolicyClause
+) WITH REVERSE_EDGE="CLAUSE_CITED_BY"
+
+// Transaction matched a FraudPattern
+CREATE DIRECTED EDGE MATCHED_BY (
+    FROM Transaction, TO FraudPattern,
+    match_score FLOAT DEFAULT 0.0   -- pattern confidence for this tx
+) WITH REVERSE_EDGE="PATTERN_MATCHES_TX"
+
+// ---------------------------------------------------------------------------
+// CREATE GRAPH — binds all vertex & edge types
+// ---------------------------------------------------------------------------
+CREATE GRAPH FraudInvestigation(*)

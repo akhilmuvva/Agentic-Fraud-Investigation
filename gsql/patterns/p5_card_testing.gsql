@@ -1,0 +1,173 @@
+// =============================================================================
+// Pattern 5 — Card Testing
+// Query    : detect_card_testing
+// Graph    : FraudInvestigation
+// Author   : TigerGraph Agentic Fraud Investigation
+// Created  : 2026-09-22
+//
+// Logic:
+//   1. Walk Card → Transaction within the last window_hours.
+//   2. Separate into:
+//        low_value  : TransactionAmt < $10  (probe / testing transactions)
+//        high_value : TransactionAmt > $100 (exploitation transaction)
+//   3. Find the earliest high-value transaction that occurs AFTER any low-value.
+//   4. Compute time gap in minutes between the last low-value probe and the
+//      first high-value exploitation.
+//   5. Also check C2 (count of cards sharing billing address):
+//        If any transaction has C2 > 3, flag as potential testing ring.
+//   6. Return low_value_txns, high_value_txn, time_gap_minutes, ring_size.
+// =============================================================================
+
+USE GRAPH FraudInvestigation
+
+CREATE OR REPLACE QUERY detect_card_testing(
+    STRING card_id,      -- card vertex primary ID to investigate
+    INT    window_hours  -- look-back window in hours
+) FOR GRAPH FraudInvestigation
+  SYNTAX V2
+{
+    // -----------------------------------------------------------------------
+    // Tuple definitions and accumulators
+    // -----------------------------------------------------------------------
+    TYPEDEF TUPLE<
+        STRING transaction_id,
+        FLOAT  amount,
+        INT    transaction_dt,
+        STRING product_cd,
+        FLOAT  c2_value
+    > TxnTuple;
+
+    // Collect low-value probe transactions
+    ListAccum<TxnTuple> @@low_value_txns;
+
+    // Collect high-value exploitation transactions
+    ListAccum<TxnTuple> @@high_value_txns;
+
+    // Scalar results
+    MaxAccum<INT>   @@max_dt                 = 0;
+    MaxAccum<INT>   @@last_low_dt            = 0;   -- latest low-value tx dt
+    MinAccum<INT>   @@first_high_dt          = 2147483647; -- earliest high-value tx dt
+    MaxAccum<FLOAT> @@max_c2                 = 0.0;
+    SumAccum<INT>   @@low_value_count        = 0;
+    SumAccum<INT>   @@high_value_count       = 0;
+    OrAccum         @@card_testing_flagged   = FALSE;
+
+    // -----------------------------------------------------------------------
+    // Step 0 — Anchor on target Card
+    // -----------------------------------------------------------------------
+    Seed = {Card.*};
+    TargetCard = SELECT c
+                 FROM   Seed:c
+                 WHERE  c.card_id == card_id;
+
+    IF TargetCard.size() == 0 THEN
+        PRINT "Card not found: " + card_id;
+        RETURN;
+    END;
+
+    // -----------------------------------------------------------------------
+    // Step 1 — Find max TransactionDT for window anchoring
+    // -----------------------------------------------------------------------
+    _ = SELECT t
+        FROM   TargetCard:c -(USED_IN:e)- Transaction:t
+        ACCUM  @@max_dt += t.TransactionDT;
+
+    INT window_seconds = window_hours * 3600;
+    INT window_start   = @@max_dt - window_seconds;
+
+    // -----------------------------------------------------------------------
+    // Step 2 — Classify transactions within the window
+    // -----------------------------------------------------------------------
+    WindowTxns = SELECT t
+        FROM TargetCard:c -(USED_IN:e)- Transaction:t
+        WHERE t.TransactionDT >= window_start
+        ACCUM
+            // Track ring indicator (C2 > 3 means many cards at same address)
+            @@max_c2 += t.C2,
+
+            // Low-value probe: amount < $10
+            IF t.TransactionAmt < 10.0 THEN
+                @@low_value_txns  += TxnTuple(
+                    t.transaction_id,
+                    t.TransactionAmt,
+                    t.TransactionDT,
+                    t.ProductCD,
+                    t.C2
+                ),
+                @@low_value_count  += 1,
+                @@last_low_dt      += t.TransactionDT   -- MaxAccum: tracks latest low-value
+
+            // High-value exploitation: amount > $100
+            ELSE IF t.TransactionAmt > 100.0 THEN
+                @@high_value_txns  += TxnTuple(
+                    t.transaction_id,
+                    t.TransactionAmt,
+                    t.TransactionDT,
+                    t.ProductCD,
+                    t.C2
+                ),
+                @@high_value_count += 1,
+                @@first_high_dt    += t.TransactionDT   -- MinAccum: tracks earliest high-value
+            END;
+
+    // -----------------------------------------------------------------------
+    // Step 3 — Determine if the pattern fires
+    // -----------------------------------------------------------------------
+    FLOAT time_gap_minutes = 0.0;
+    INT   ring_size        = 0;
+
+    IF @@low_value_count > 0 AND @@high_value_count > 0 THEN
+        // At least one probe followed by at least one exploitation
+        IF @@first_high_dt > @@last_low_dt THEN
+            // High-value tx occurred AFTER the last low-value tx — classic pattern
+            @@card_testing_flagged = TRUE;
+            time_gap_minutes = (@@first_high_dt - @@last_low_dt) / 60.0;
+        END;
+    END;
+
+    // Ring size: if C2 > 3, the billing address has many associated cards
+    IF @@max_c2 > 3.0 THEN
+        ring_size = @@max_c2;
+    END;
+
+    // -----------------------------------------------------------------------
+    // Step 4 — Find the best high-value transaction to surface as primary hit
+    // -----------------------------------------------------------------------
+    // We return the full lists but also identify the primary exploitation tx
+    TYPEDEF TUPLE<
+        STRING transaction_id,
+        FLOAT  amount,
+        INT    time_gap_minutes_int,
+        BOOL   after_probe
+    > PrimaryHitTuple;
+
+    ListAccum<PrimaryHitTuple> @@primary_high_value;
+    _ = SELECT t
+        FROM TargetCard:c -(USED_IN:e)- Transaction:t
+        WHERE t.TransactionDT == @@first_high_dt
+              AND t.TransactionAmt > 100.0
+        ACCUM
+            @@primary_high_value += PrimaryHitTuple(
+                t.transaction_id,
+                t.TransactionAmt,
+                (@@first_high_dt - @@last_low_dt) / 60,
+                @@card_testing_flagged
+            );
+
+    // -----------------------------------------------------------------------
+    // Step 5 — Return results
+    // -----------------------------------------------------------------------
+    PRINT card_id                 AS queried_card_id;
+    PRINT window_hours            AS window_hours_used;
+    PRINT @@card_testing_flagged  AS card_testing_pattern_detected;
+    PRINT @@low_value_count       AS probe_transaction_count;
+    PRINT @@high_value_count      AS exploitation_transaction_count;
+    PRINT time_gap_minutes        AS time_gap_minutes;
+    PRINT ring_size               AS ring_size_c2;
+    PRINT @@max_c2                AS max_c2_observed;
+    PRINT @@low_value_txns        AS low_value_probe_transactions;
+    PRINT @@primary_high_value    AS high_value_exploitation_transaction;
+    PRINT @@high_value_txns       AS all_high_value_transactions;
+}
+
+INSTALL QUERY detect_card_testing

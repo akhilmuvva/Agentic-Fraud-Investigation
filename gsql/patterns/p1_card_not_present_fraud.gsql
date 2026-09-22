@@ -1,0 +1,139 @@
+// =============================================================================
+// Pattern 1 — Card-Not-Present Fraud
+// Query    : detect_card_not_present_fraud
+// Graph    : FraudInvestigation
+// Author   : TigerGraph Agentic Fraud Investigation
+// Created  : 2026-09-22
+//
+// Logic:
+//   1. Walk Card → Transaction edges within lookback_days window.
+//   2. Filter to CNP channels: ProductCD ∈ {W, H}.
+//   3. Flag identity-check mismatches: M1 ≠ "T" OR M6 ≠ "T" OR M9 ≠ "T".
+//   4. Flag high address-diversity on card: C1 > 5.
+//   5. Accumulate suspicious transactions in a max-heap ordered by risk.
+//   6. Return top-10 suspicious results with evidence fields.
+// =============================================================================
+
+USE GRAPH FraudInvestigation
+
+CREATE OR REPLACE QUERY detect_card_not_present_fraud(
+    STRING card_id,      -- card vertex primary ID to investigate
+    INT    lookback_days -- number of days back from latest transaction to scan
+) FOR GRAPH FraudInvestigation
+  SYNTAX V2
+{
+    // -----------------------------------------------------------------------
+    // Accumulators
+    // -----------------------------------------------------------------------
+
+    // HeapAccum stores the top suspicious transactions by descending risk score.
+    // Tuple fields: (risk_score, transaction_id, TransactionAmt, mismatch_count,
+    //                high_addr_diversity, m1_flag, m6_flag, m9_flag, c1_value)
+    TYPEDEF TUPLE<
+        FLOAT  risk_score,
+        STRING transaction_id,
+        FLOAT  TransactionAmt,
+        INT    mismatch_count,
+        BOOL   high_addr_diversity,
+        STRING m1_flag,
+        STRING m6_flag,
+        STRING m9_flag,
+        FLOAT  c1_value
+    > SuspiciousTxTuple;
+
+    HeapAccum<SuspiciousTxTuple>(10, DESC, risk_score) @@suspicious_txns;
+
+    // Summary counters
+    SumAccum<INT>   @@total_cnp_scanned    = 0;
+    SumAccum<INT>   @@total_mismatch_cnt   = 0;
+    SumAccum<FLOAT> @@max_risk             = 0.0;
+
+    // -----------------------------------------------------------------------
+    // Step 0 — Anchor on the target Card vertex
+    // -----------------------------------------------------------------------
+    Seed = {Card.*};
+    TargetCard = SELECT c
+                 FROM   Seed:c
+                 WHERE  c.card_id == card_id;
+
+    IF TargetCard.size() == 0 THEN
+        PRINT "Card not found: " + card_id;
+        RETURN;
+    END;
+
+    // -----------------------------------------------------------------------
+    // Step 1 — Fetch all Transactions on this Card within the lookback window
+    // -----------------------------------------------------------------------
+    // We use TransactionDT (seconds-since-epoch offset) for the window.
+    // lookback_days is converted to seconds.
+    INT lookback_seconds = lookback_days * 86400;
+
+    // Find the maximum TransactionDT across all transactions for this card
+    // so we can compute a relative window.
+    MaxAccum<INT> @@max_dt = 0;
+    AllTxns = SELECT t
+              FROM   TargetCard:c -(USED_IN:e)- Transaction:t
+              ACCUM  @@max_dt += t.TransactionDT;
+
+    INT window_start = @@max_dt - lookback_seconds;
+
+    // -----------------------------------------------------------------------
+    // Step 2 — Filter to CNP channels and apply mismatch / diversity checks
+    // -----------------------------------------------------------------------
+    SuspectedTxns = SELECT t
+        FROM TargetCard:c -(USED_IN:e)- Transaction:t
+        WHERE
+            // Within time window
+            t.TransactionDT >= window_start
+            // Card-Not-Present channel
+            AND (t.ProductCD == "W" OR t.ProductCD == "H")
+        ACCUM
+            @@total_cnp_scanned += 1,
+
+            // Count identity-check mismatches
+            INT mismatch = 0,
+            IF t.M1 != "T" THEN mismatch = mismatch + 1 END,
+            IF t.M6 != "T" THEN mismatch = mismatch + 1 END,
+            IF t.M9 != "T" THEN mismatch = mismatch + 1 END,
+            @@total_mismatch_cnt += mismatch,
+
+            // High address diversity flag
+            BOOL high_addr = (t.C1 > 5),
+
+            // Risk score:
+            //   Base   0.3 for being CNP
+            //   +0.2 per mismatch flag (max 0.6)
+            //   +0.2 for high address diversity
+            //   Capped at 1.0
+            FLOAT risk = 0.3
+                       + (mismatch * 0.2)
+                       + (CASE WHEN t.C1 > 5 THEN 0.2 ELSE 0.0 END),
+            FLOAT capped_risk = CASE WHEN risk > 1.0 THEN 1.0 ELSE risk END,
+
+            // Only accumulate if at least one indicator fires
+            IF mismatch > 0 OR high_addr THEN
+                @@suspicious_txns += SuspiciousTxTuple(
+                    capped_risk,
+                    t.transaction_id,
+                    t.TransactionAmt,
+                    mismatch,
+                    high_addr,
+                    t.M1,
+                    t.M6,
+                    t.M9,
+                    t.C1
+                ),
+                @@max_risk += capped_risk   // SumAccum — we'll derive max separately
+            END;
+
+    // -----------------------------------------------------------------------
+    // Step 3 — Return results
+    // -----------------------------------------------------------------------
+    PRINT @@total_cnp_scanned AS total_cnp_transactions_scanned;
+    PRINT @@total_mismatch_cnt AS total_identity_mismatch_events;
+    PRINT @@suspicious_txns    AS suspicious_transactions;
+    PRINT card_id              AS queried_card_id;
+    PRINT lookback_days        AS lookback_days_used;
+}
+
+INSTALL QUERY detect_card_not_present_fraud

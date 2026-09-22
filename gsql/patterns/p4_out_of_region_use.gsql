@@ -1,0 +1,148 @@
+// =============================================================================
+// Pattern 4 — Out-of-Region Use
+// Query    : detect_out_of_region_use
+// Graph    : FraudInvestigation
+// Author   : TigerGraph Agentic Fraud Investigation
+// Created  : 2026-09-22
+//
+// Logic:
+//   1. Look back 90 days of transactions for the target card.
+//   2. Build a frequency distribution of addr1 (billing region) values.
+//   3. Compute the total count, and the frequency of each region as a %.
+//   4. Look up the flagged transaction's addr1.
+//   5. If that addr1 accounts for < 5% of historical transactions, flag it.
+//   6. Anomaly score = 1.0 − (freq_pct / 5.0), clamped [0,1].
+//   7. Return the historical distribution, the flagged addr, and the score.
+// =============================================================================
+
+USE GRAPH FraudInvestigation
+
+CREATE OR REPLACE QUERY detect_out_of_region_use(
+    STRING card_id,        -- card vertex primary ID to investigate
+    STRING transaction_id  -- the specific transaction to evaluate
+) FOR GRAPH FraudInvestigation
+  SYNTAX V2
+{
+    // -----------------------------------------------------------------------
+    // Accumulators
+    // -----------------------------------------------------------------------
+    TYPEDEF TUPLE<
+        STRING addr1,
+        INT    count,
+        FLOAT  frequency_pct
+    > AddrFreqTuple;
+
+    // Store address distribution as list of tuples for output
+    HeapAccum<AddrFreqTuple>(50, DESC, count) @@addr_distribution;
+    MapAccum<STRING, INT> @@addr_count_map;
+
+    SumAccum<INT>    @@total_hist_tx         = 0;
+    SumAccum<FLOAT>  @@anomaly_score         = 0.0;
+    SumAccum<STRING> @@flagged_addr          = "";  -- addr1 of the flagged tx
+    SumAccum<FLOAT>  @@flagged_freq_pct      = 0.0;
+    OrAccum          @@is_out_of_region      = FALSE;
+    MaxAccum<INT>    @@max_dt                = 0;
+
+    // -----------------------------------------------------------------------
+    // Step 0 — Anchor on the target Card
+    // -----------------------------------------------------------------------
+    Seed = {Card.*};
+    TargetCard = SELECT c
+                 FROM   Seed:c
+                 WHERE  c.card_id == card_id;
+
+    IF TargetCard.size() == 0 THEN
+        PRINT "Card not found: " + card_id;
+        RETURN;
+    END;
+
+    // -----------------------------------------------------------------------
+    // Step 1 — Find the flagged transaction's addr1
+    // -----------------------------------------------------------------------
+    TxSeed = {Transaction.*};
+    FlaggedTx = SELECT t
+                FROM   TxSeed:t
+                WHERE  t.transaction_id == transaction_id;
+
+    IF FlaggedTx.size() == 0 THEN
+        PRINT "Transaction not found: " + transaction_id;
+        RETURN;
+    END;
+
+    // Extract the flagged addr1
+    STRING flagged_addr1 = "";
+    _ = SELECT t
+        FROM   FlaggedTx:t
+        ACCUM  @@flagged_addr += t.addr1;
+    flagged_addr1 = @@flagged_addr;
+
+    // -----------------------------------------------------------------------
+    // Step 2 — Build historical addr1 distribution (last 90 days)
+    // -----------------------------------------------------------------------
+    INT window_90_days = 90 * 86400;
+
+    // Find latest TransactionDT for this card
+    _ = SELECT t
+        FROM   TargetCard:c -(USED_IN:e)- Transaction:t
+        ACCUM  @@max_dt += t.TransactionDT;
+
+    INT window_start = @@max_dt - window_90_days;
+
+    // Collect addr1 counts from historical transactions
+    // Exclude the flagged transaction itself from the baseline
+    HistTxns = SELECT t
+               FROM   TargetCard:c -(USED_IN:e)- Transaction:t
+               WHERE  t.TransactionDT >= window_start
+                      AND t.transaction_id != transaction_id
+                      AND t.addr1 != ""
+               ACCUM
+                   @@addr_count_map += (t.addr1 -> 1),
+                   @@total_hist_tx  += 1;
+
+    // -----------------------------------------------------------------------
+    // Step 3 — Compute frequency percentages and find flagged addr freq
+    // -----------------------------------------------------------------------
+    FLOAT total_f = @@total_hist_tx * 1.0;
+
+    // If no history, we can't compute distribution — flag with max score
+    IF @@total_hist_tx == 0 THEN
+        @@anomaly_score += 1.0;
+        @@is_out_of_region = TRUE;
+        @@flagged_freq_pct += 0.0;
+    ELSE
+        // Build frequency tuples
+        FOREACH (addr, cnt) IN @@addr_count_map DO
+            FLOAT pct = (cnt * 100.0) / total_f,
+            @@addr_distribution += AddrFreqTuple(addr, cnt, pct);
+        END;
+
+        // Look up flagged addr1 frequency
+        FLOAT f_pct = 0.0;
+        IF @@addr_count_map.containsKey(flagged_addr1) THEN
+            f_pct = (@@addr_count_map.get(flagged_addr1) * 100.0) / total_f;
+        END;
+        @@flagged_freq_pct += f_pct;
+
+        // Anomaly criteria: < 5% frequency in historical distribution
+        IF f_pct < 5.0 THEN
+            @@is_out_of_region = TRUE;
+            // Anomaly score: 1.0 when freq=0%, 0.0 when freq=5%
+            FLOAT raw_score = 1.0 - (f_pct / 5.0);
+            @@anomaly_score += CASE WHEN raw_score > 1.0 THEN 1.0 ELSE raw_score END;
+        END;
+    END;
+
+    // -----------------------------------------------------------------------
+    // Step 4 — Return results
+    // -----------------------------------------------------------------------
+    PRINT card_id               AS queried_card_id;
+    PRINT transaction_id        AS queried_transaction_id;
+    PRINT flagged_addr1         AS flagged_addr1;
+    PRINT @@flagged_freq_pct    AS flagged_addr_historical_frequency_pct;
+    PRINT @@is_out_of_region    AS is_out_of_region;
+    PRINT @@anomaly_score       AS anomaly_score;
+    PRINT @@total_hist_tx       AS historical_transaction_count_90d;
+    PRINT @@addr_distribution   AS historical_addr_distribution;
+}
+
+INSTALL QUERY detect_out_of_region_use
