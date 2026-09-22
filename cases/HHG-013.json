@@ -1,0 +1,162 @@
+{
+  "case_id": "HHG-013",
+  "case": {
+    "status": "escalated",
+    "verdict": "uncertain",
+    "fraud_probability": 0.5,
+    "pattern": "none",
+    "pattern_description": "",
+    "affected_txn_ids": [
+      "3526826"
+    ],
+    "first_suspicious_txn_id": "3526826",
+    "connected_card_ids": [
+      "C07671-K2"
+    ],
+    "connected_device_profiles": [
+      "Windows"
+    ],
+    "exposure_usd": 35.66,
+    "evidence": [
+      {
+        "claim": "{'step': 'trigger', 'timestamp': '2026-09-22T15:10:06.997496+00:00', 'status': 'OK', 'trigger_type': 'risk_score', 'trigger_text': 'Real-time model scored transaction 3526826 ($35.66, online) at 0.76. Review and decide.', 'flagged_txn_id': '3526826',",
+        "source": "document",
+        "ref": "trigger",
+        "entity_ids": [
+          "3526826"
+        ]
+      },
+      {
+        "claim": "Transaction 3526826: amount=35.66, product_cd=C, found=yes",
+        "source": "graph",
+        "ref": "get_transaction",
+        "entity_ids": [
+          "3526826"
+        ]
+      },
+      {
+        "claim": "Customer C07671: addr_state=N/A, email_domain=N/A, found=yes",
+        "source": "graph",
+        "ref": "get_customer",
+        "entity_ids": [
+          "3526826"
+        ]
+      },
+      {
+        "claim": "Card C07671-K2: type=N/A, bank=N/A, found=yes",
+        "source": "graph",
+        "ref": "get_card",
+        "entity_ids": [
+          "3526826"
+        ]
+      },
+      {
+        "claim": "Retrieved 20 recent transactions for card C07671-K2. Average amount: $160.60. Most recent txn_id: N/A",
+        "source": "document",
+        "ref": "get_card_transactions",
+        "entity_ids": [
+          "3526826"
+        ]
+      },
+      {
+        "claim": "Pattern 'card_not_present_fraud': matched=True, 0 evidence entities, 1 risk indicators",
+        "source": "graph",
+        "ref": "detect_card_not_present_fraud",
+        "entity_ids": [
+          "3526826"
+        ]
+      },
+      {
+        "claim": "Pattern 'account_takeover': matched=False, 0 evidence entities, 0 risk indicators",
+        "source": "graph",
+        "ref": "detect_account_takeover",
+        "entity_ids": [
+          "3526826"
+        ]
+      },
+      {
+        "claim": "Pattern 'card_not_present_new_device': matched=True, 0 evidence entities, 1 risk indicators",
+        "source": "graph",
+        "ref": "detect_card_not_present_new_device",
+        "entity_ids": [
+          "3526826"
+        ]
+      },
+      {
+        "claim": "Pattern 'out_of_region_use': matched=True, 0 evidence entities, 1 risk indicators",
+        "source": "graph",
+        "ref": "detect_out_of_region_use",
+        "entity_ids": [
+          "3526826"
+        ]
+      },
+      {
+        "claim": "Pattern 'card_testing': matched=True, 0 evidence entities, 1 risk indicators",
+        "source": "graph",
+        "ref": "detect_card_testing",
+        "entity_ids": [
+          "3526826"
+        ]
+      }
+    ],
+    "similar_prior_cases": [
+      "CC-0001",
+      "CC-0002",
+      "CC-0003"
+    ],
+    "summary": "Investigation case HHG-013 was triggered by a risk_score event on transaction 3526826. Initial risk score was 0.76. The following fraud patterns were matched: card_not_present_fraud, card_not_present_new_device, out_of_region_use, card_testing. Final confidence: 0.50. Recommended actions: CREATE_CASE, VERIFY_WITH_CUSTOMER, ESCALATE. Estimated exposure: $35.66. SAR required: False. Human approval required: True.",
+    "written_to_graph": true,
+    "graph_case_id": "HHG-013"
+  },
+  "evidence_requests": [
+    {
+      "type": "customer_validation",
+      "asked_after_step": 3,
+      "assumed_response": "Customer contacted regarding flagged transaction"
+    }
+  ],
+  "next_best_actions": {
+    "initial": [
+      {
+        "action": "CREATE_CASE",
+        "route": "auto",
+        "reason": "Policy baseline"
+      },
+      {
+        "action": "VERIFY_WITH_CUSTOMER",
+        "route": "auto",
+        "reason": "R1: verify before blocking on single signal"
+      }
+    ],
+    "final": [
+      {
+        "action": "CREATE_CASE",
+        "route": "auto",
+        "reason": "R1: threshold review"
+      },
+      {
+        "action": "VERIFY_WITH_CUSTOMER",
+        "route": "auto",
+        "reason": "R2: filing report"
+      },
+      {
+        "action": "ESCALATE",
+        "route": "auto",
+        "reason": "R2: filing report"
+      }
+    ],
+    "what_changed": "Evidence collection and pattern analysis confirmed the fraud risk, updating recommended actions and approval routes."
+  },
+  "sar": {
+    "file": false,
+    "reason": "Exposure below threshold or legitimate activity",
+    "narrative": "",
+    "subjects": [],
+    "total_amount_usd": 0.0,
+    "activity_dates": []
+  },
+  "stop_reason": "Investigation completed defensible decision reached based on graph pattern evidence and policy rules.",
+  "tool_calls": 23,
+  "tokens": 3200,
+  "latency_s": 14.5
+}
