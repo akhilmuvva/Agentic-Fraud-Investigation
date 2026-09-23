@@ -180,11 +180,95 @@ const SarPanel: React.FC<{ caseData: NonNullable<ReturnType<typeof useCaseDetail
   );
 };
 
+/* ── Confidence Progress Ring ───────────────────────────────── */
+const ConfidenceRing: React.FC<{
+  probability: number;
+  color: string;
+  prefersReduced?: boolean;
+}> = ({ probability, color, prefersReduced = false }) => {
+  const size = 68;
+  const strokeWidth = 5.5;
+  const radius = (size - strokeWidth) / 2; // (68 - 5.5) / 2 = 31.25
+  const circumference = 2 * Math.PI * radius; // ~196.35
+  const targetOffset = circumference - probability * circumference;
+
+  return (
+    <div
+      style={{
+        position: 'relative',
+        width: size,
+        height: size,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+      }}
+    >
+      <svg
+        width={size}
+        height={size}
+        style={{ transform: 'rotate(-90deg)', overflow: 'visible' }}
+        aria-hidden="true"
+      >
+        {/* Track circle */}
+        <circle
+          cx={size / 2}
+          cy={size / 2}
+          r={radius}
+          stroke="#E2E8F0"
+          strokeWidth={strokeWidth}
+          fill="transparent"
+        />
+        {/* Animated progress circle */}
+        <motion.circle
+          cx={size / 2}
+          cy={size / 2}
+          r={radius}
+          stroke={color}
+          strokeWidth={strokeWidth}
+          strokeLinecap="round"
+          fill="transparent"
+          strokeDasharray={circumference}
+          initial={prefersReduced ? false : { strokeDashoffset: circumference }}
+          animate={{ strokeDashoffset: targetOffset }}
+          transition={{ duration: prefersReduced ? 0 : 0.85, ease: [0.34, 1.56, 0.64, 1] }}
+        />
+      </svg>
+      {/* Centered Percentage */}
+      <div
+        style={{
+          position: 'absolute',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        <span
+          style={{
+            fontFamily: 'Space Grotesk, sans-serif',
+            fontSize: 16,
+            fontWeight: 800,
+            color,
+            lineHeight: 1,
+            letterSpacing: '-0.02em',
+          }}
+        >
+          {formatConfidence(probability)}
+        </span>
+      </div>
+    </div>
+  );
+};
+
 /* ── Main CaseDetailPage ────────────────────────────────────── */
 export const CaseDetailPage: React.FC = () => {
   const { caseId } = useParams<{ caseId: string }>();
   const { caseData, loading, error, notFound } = useCaseDetail(caseId);
   const [activeTab, setActiveTab] = useState<'graph' | 'details'>('graph');
+
+  const prefersReduced =
+    typeof window !== 'undefined' &&
+    window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
   if (loading) {
     return (
@@ -225,80 +309,372 @@ export const CaseDetailPage: React.FC = () => {
 
   if (!caseData) return null;
   const { case: c } = caseData;
-  const probColor = c.fraud_probability >= 0.7 ? 'var(--color-risk-high)' : c.fraud_probability >= 0.4 ? 'var(--color-risk-med)' : 'var(--color-risk-low)';
+  const probColor =
+    c.fraud_probability >= 0.7
+      ? '#E05252'
+      : c.fraud_probability >= 0.4
+      ? '#D97706'
+      : '#059669';
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 14 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.3 }}
-      style={{ maxWidth: 1060, margin: '0 auto', padding: '32px 24px', display: 'flex', flexDirection: 'column', gap: 20 }}
+    <div
+      style={{
+        maxWidth: 1060,
+        margin: '0 auto',
+        padding: '32px 24px',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 20,
+      }}
     >
       {/* Breadcrumb */}
-      <Link to="/" style={{ fontSize: 12, color: 'var(--color-text-muted)', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 4, transition: 'color 0.15s' }}
+      <Link
+        to="/"
+        style={{
+          fontSize: 12,
+          fontWeight: 600,
+          color: 'var(--color-text-muted)',
+          textDecoration: 'none',
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: 4,
+          transition: 'color 0.15s',
+          width: 'fit-content',
+        }}
         onMouseEnter={e => (e.currentTarget.style.color = 'var(--color-brand)')}
-        onMouseLeave={e => (e.currentTarget.style.color = 'var(--color-text-muted)')}>
+        onMouseLeave={e => (e.currentTarget.style.color = 'var(--color-text-muted)')}
+      >
         ← All Investigations
       </Link>
 
-      {/* Header card */}
-      <div className="nm-xl" style={{ padding: '28px 32px' }}>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 20, alignItems: 'flex-start' }}>
-          <div style={{ flex: 1, minWidth: 240 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', marginBottom: 10 }}>
-              <h1 style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 26, fontWeight: 800, color: 'var(--color-text)', letterSpacing: '-0.01em' }}>
+      {/* Primary Case Summary Card */}
+      <motion.div
+        initial={prefersReduced ? false : { opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.35, ease: 'easeOut' }}
+        style={{
+          padding: '30px 34px',
+          background: '#FFFFFF',
+          borderRadius: 20,
+          boxShadow:
+            '0 10px 25px -4px rgba(15, 23, 42, 0.06), 0 4px 10px -2px rgba(15, 23, 42, 0.03), 0 0 0 1px rgba(226, 232, 240, 0.8)',
+        }}
+      >
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 24, alignItems: 'flex-start', justifyContent: 'space-between' }}>
+          {/* Left Column: ID, Verdict, Tags, Summary */}
+          <div style={{ flex: 1, minWidth: 280 }}>
+            {/* Small uppercase label above Case ID */}
+            <div
+              style={{
+                fontSize: 10,
+                fontWeight: 700,
+                letterSpacing: '0.08em',
+                textTransform: 'uppercase',
+                color: '#64748B',
+                fontFamily: 'JetBrains Mono, monospace',
+                marginBottom: 3,
+              }}
+            >
+              Case ID
+            </div>
+
+            {/* Header row: Case ID + Verdict badge + SAR badge */}
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 12,
+                flexWrap: 'wrap',
+                marginBottom: 12,
+              }}
+            >
+              <h1
+                style={{
+                  fontFamily: 'JetBrains Mono, monospace',
+                  fontSize: 28,
+                  fontWeight: 800,
+                  color: 'var(--color-text)',
+                  letterSpacing: '-0.02em',
+                  lineHeight: 1,
+                  margin: 0,
+                }}
+              >
                 {caseData.case_id}
               </h1>
               <VerdictBadge verdict={c.verdict} size="lg" />
               <SarFlag required={caseData.sar.file} size="md" />
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12, flexWrap: 'wrap' }}>
+
+            {/* Tags row: Pattern tag + Status tag */}
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 10,
+                marginBottom: 14,
+                flexWrap: 'wrap',
+              }}
+            >
               <PatternTag pattern={c.pattern} showFull />
-              <span className="nm-pill" style={{ fontSize: 10, padding: '3px 10px', color: 'var(--color-text-muted)' }}>
-                {toTitleCase(c.status)}
+              {/* Neutral distinct status tag */}
+              <span
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  padding: '4px 12px',
+                  fontSize: 11,
+                  fontWeight: 600,
+                  color: '#475569',
+                  background: '#F1F5F9',
+                  border: '1px solid #CBD5E1',
+                  borderRadius: 20,
+                  boxShadow: '0 1px 2px rgba(15, 23, 42, 0.03)',
+                }}
+              >
+                <span
+                  style={{
+                    width: 6,
+                    height: 6,
+                    borderRadius: '50%',
+                    background:
+                      c.status === 'escalated'
+                        ? '#D97706'
+                        : c.status.startsWith('closed')
+                        ? '#059669'
+                        : '#3B82F6',
+                  }}
+                />
+                <span>{toTitleCase(c.status)}</span>
               </span>
             </div>
+
+            {/* Summary prose constrained for optimal reading */}
             {c.summary && (
-              <p style={{ fontSize: 13, color: 'var(--color-text-secondary)', lineHeight: 1.7, maxWidth: 560 }}>{c.summary}</p>
+              <p
+                style={{
+                  fontSize: 13.5,
+                  color: '#475569',
+                  lineHeight: 1.75,
+                  maxWidth: 620,
+                  margin: 0,
+                }}
+              >
+                {c.summary}
+              </p>
             )}
           </div>
 
-          {/* Metric boxes */}
-          <div style={{ display: 'flex', gap: 14, flexShrink: 0, flexWrap: 'wrap' }}>
-            <div className="nm-inset" style={{ padding: '18px 24px', textAlign: 'center', minWidth: 110 }}>
-              <div style={{ fontFamily: 'Space Grotesk, monospace', fontSize: 32, fontWeight: 800, color: probColor, letterSpacing: '-0.04em', lineHeight: 1 }}>
-                {formatConfidence(c.fraud_probability)}
-              </div>
-              <div style={{ fontSize: 10, color: 'var(--color-text-muted)', marginTop: 6, fontWeight: 600 }}>Confidence</div>
-              <div className="nm-progress-track" style={{ marginTop: 8, height: 5 }}>
-                <div className="nm-progress-fill" style={{ width: `${c.fraud_probability * 100}%`, background: probColor }} />
-              </div>
+          {/* Right Column: Confidence and Exposure Metric Cards */}
+          <div style={{ display: 'flex', gap: 14, flexShrink: 0, flexWrap: 'wrap', alignItems: 'stretch' }}>
+            {/* Confidence Tile */}
+            <div
+              style={{
+                background: '#F8FAFC',
+                borderRadius: 16,
+                border: '1px solid rgba(226, 232, 240, 0.9)',
+                boxShadow: '0 2px 6px rgba(15, 23, 42, 0.04)',
+                padding: '16px 20px',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                minWidth: 124,
+                gap: 8,
+              }}
+            >
+              <ConfidenceRing
+                probability={c.fraud_probability}
+                color={probColor}
+                prefersReduced={prefersReduced}
+              />
+              <span
+                style={{
+                  fontSize: 10,
+                  fontWeight: 700,
+                  letterSpacing: '0.06em',
+                  textTransform: 'uppercase',
+                  color: '#64748B',
+                  fontFamily: 'JetBrains Mono, monospace',
+                }}
+              >
+                Confidence
+              </span>
             </div>
-            <div className="nm-inset" style={{ padding: '18px 24px', textAlign: 'center', minWidth: 110 }}>
-              <div style={{ fontFamily: 'Space Grotesk, monospace', fontSize: 26, fontWeight: 800, color: 'var(--color-text)', letterSpacing: '-0.04em', lineHeight: 1 }}>
+
+            {/* Exposure Tile */}
+            <div
+              style={{
+                background: '#F8FAFC',
+                borderRadius: 16,
+                border: '1px solid rgba(226, 232, 240, 0.9)',
+                boxShadow: '0 2px 6px rgba(15, 23, 42, 0.04)',
+                padding: '16px 20px',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                minWidth: 134,
+                gap: 6,
+              }}
+            >
+              <div
+                style={{
+                  width: 32,
+                  height: 32,
+                  borderRadius: '50%',
+                  background: 'rgba(37, 99, 235, 0.09)',
+                  border: '1px solid rgba(37, 99, 235, 0.2)',
+                  color: '#2563EB',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: 15,
+                  fontWeight: 800,
+                  fontFamily: 'JetBrains Mono, monospace',
+                }}
+              >
+                $
+              </div>
+              <div
+                style={{
+                  fontFamily: 'JetBrains Mono, monospace',
+                  fontSize: 22,
+                  fontWeight: 800,
+                  color: '#0F172A',
+                  letterSpacing: '-0.03em',
+                  lineHeight: 1.1,
+                }}
+              >
                 {formatUSD(c.exposure_usd)}
               </div>
-              <div style={{ fontSize: 10, color: 'var(--color-text-muted)', marginTop: 6, fontWeight: 600 }}>Exposure</div>
+              <span
+                style={{
+                  fontSize: 10,
+                  fontWeight: 700,
+                  letterSpacing: '0.06em',
+                  textTransform: 'uppercase',
+                  color: '#64748B',
+                  fontFamily: 'JetBrains Mono, monospace',
+                  marginTop: 2,
+                }}
+              >
+                Exposure
+              </span>
             </div>
           </div>
         </div>
-      </div>
+      </motion.div>
 
-      {/* Agent Pipeline */}
-      <AgentPipelineView isRunning={false} latencyS={caseData.latency_s} />
+      {/* Agent Execution Pipeline Card */}
+      <motion.div
+        initial={prefersReduced ? false : { opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.35, delay: prefersReduced ? 0 : 0.1, ease: 'easeOut' }}
+      >
+        <AgentPipelineView isRunning={false} latencyS={caseData.latency_s} />
+      </motion.div>
 
-      {/* SAR */}
+      {/* SAR Panel (if filing required) */}
       {caseData.sar.file && <SarPanel caseData={caseData} />}
 
-      {/* Tabs */}
-      <div className="nm-tab-bar">
-        <button className={`nm-tab ${activeTab === 'graph' ? 'active' : ''}`} onClick={() => setActiveTab('graph')} role="tab" aria-selected={activeTab === 'graph'}>
-          🕸 Graph View
-        </button>
-        <button className={`nm-tab ${activeTab === 'details' ? 'active' : ''}`} onClick={() => setActiveTab('details')} role="tab" aria-selected={activeTab === 'details'}>
-          📋 Analysis Details
-        </button>
-      </div>
+      {/* Segmented Control Tabs */}
+      <motion.div
+        initial={prefersReduced ? false : { opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3, delay: prefersReduced ? 0 : 0.18 }}
+        style={{ display: 'flex', alignItems: 'center' }}
+      >
+        <div
+          role="tablist"
+          aria-label="Investigation view modes"
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            background: '#E2E8F0',
+            padding: 4,
+            borderRadius: 14,
+            boxShadow: 'inset 0 2px 4px rgba(15, 23, 42, 0.06)',
+            position: 'relative',
+            width: '100%',
+            maxWidth: 420,
+          }}
+        >
+          {(['graph', 'details'] as const).map(tabKey => {
+            const isActive = activeTab === tabKey;
+            return (
+              <button
+                key={tabKey}
+                role="tab"
+                id={`tab-${tabKey}`}
+                aria-selected={isActive}
+                aria-controls={`panel-${tabKey}`}
+                tabIndex={0}
+                onClick={() => setActiveTab(tabKey)}
+                onKeyDown={e => {
+                  if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
+                    setActiveTab(tabKey === 'graph' ? 'details' : 'graph');
+                  }
+                }}
+                style={{
+                  flex: 1,
+                  position: 'relative',
+                  padding: '10px 20px',
+                  fontSize: 13.5,
+                  fontFamily: 'Inter, sans-serif',
+                  fontWeight: isActive ? 700 : 500,
+                  color: isActive ? '#0F172A' : '#64748B',
+                  border: 'none',
+                  background: 'transparent',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 8,
+                  borderRadius: 10,
+                  transition: 'color 0.2s ease',
+                  zIndex: 2,
+                  outline: 'none',
+                }}
+              >
+                {isActive && (
+                  <motion.div
+                    layoutId="activeTabSegment"
+                    transition={{ type: 'spring', stiffness: 450, damping: 32 }}
+                    style={{
+                      position: 'absolute',
+                      inset: 0,
+                      background: '#FFFFFF',
+                      borderRadius: 10,
+                      boxShadow:
+                        '0 2px 8px rgba(15, 23, 42, 0.08), 0 1px 2px rgba(15, 23, 42, 0.04)',
+                      zIndex: -1,
+                    }}
+                  >
+                    {/* Thin accent-colored underline */}
+                    <div
+                      style={{
+                        position: 'absolute',
+                        bottom: 0,
+                        left: '20%',
+                        right: '20%',
+                        height: 2.5,
+                        background: '#2563EB',
+                        borderRadius: '2px 2px 0 0',
+                      }}
+                    />
+                  </motion.div>
+                )}
+                <span style={{ fontSize: 16, opacity: isActive ? 1 : 0.65 }}>
+                  {tabKey === 'graph' ? '🕸' : '📋'}
+                </span>
+                <span>{tabKey === 'graph' ? 'Graph View' : 'Analysis Details'}</span>
+              </button>
+            );
+          })}
+        </div>
+      </motion.div>
+
 
       {/* Graph tab */}
       {activeTab === 'graph' && (
@@ -340,6 +716,8 @@ export const CaseDetailPage: React.FC = () => {
           </details>
         </motion.div>
       )}
-    </motion.div>
+    </div>
   );
 };
+
+

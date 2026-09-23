@@ -1,22 +1,24 @@
 /**
- * AgentPipelineView — Neumorphic 8-node pipeline with traveling pulse.
- * Timing is ESTIMATED (~14.5s / 8 nodes). Clearly labeled.
+ * AgentPipelineView — Visual process trace for the LangGraph 8-node agent pipeline.
+ * Features a continuous background track with animated progress fill,
+ * tactile step node badges with distinct icons, pop-in animations,
+ * and a success badge for completed execution.
  */
 import React, { useEffect, useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const NODES = [
-  { id: 'ingest_case',       label: 'Ingest',         icon: '📥', desc: 'Load & validate input' },
-  { id: 'retrieve_context',  label: 'Context',         icon: '🔍', desc: 'Graph neighbourhood' },
-  { id: 'match_patterns',    label: 'Patterns',        icon: '🕸',  desc: '5 GSQL pattern queries' },
-  { id: 'retrieve_similar',  label: 'Similar',         icon: '🧠', desc: 'Vector RAG (text-embedding-004)' },
-  { id: 'decision',          label: 'Decision',        icon: '⚡', desc: 'Gemini LLM reasoning' },
-  { id: 'next_best_action',  label: 'NBA',             icon: '🎯', desc: 'NBA before/after' },
-  { id: 'write_to_graph',    label: 'Write Graph',     icon: '💾', desc: 'Persist verdict to TigerGraph' },
-  { id: 'format_output',     label: 'Output',          icon: '✅', desc: 'Final state' },
+  { id: 'ingest_case',      label: 'Ingest',      icon: '📥', desc: 'Load & validate transaction' },
+  { id: 'retrieve_context', label: 'Context',     icon: '🔍', desc: 'Extract graph neighborhood' },
+  { id: 'match_patterns',   label: 'Patterns',    icon: '🕸', desc: '5 GSQL graph pattern queries' },
+  { id: 'retrieve_similar', label: 'Similar',     icon: '🧠', desc: 'Vector similarity RAG' },
+  { id: 'decision',         label: 'Decision',    icon: '⚡', desc: 'Gemini 2.0 Flash reasoning' },
+  { id: 'next_best_action', label: 'NBA',         icon: '🎯', desc: 'Policy-based actions' },
+  { id: 'write_to_graph',   label: 'Write Graph', icon: '💾', desc: 'Persist verdict to TigerGraph' },
+  { id: 'format_output',    label: 'Output',      icon: '✅', desc: 'Final defensible dossier' },
 ] as const;
 
-const NODE_DURATION_MS = 1800;
+const NODE_DURATION_MS = 1600;
 
 interface AgentPipelineViewProps {
   isRunning: boolean;
@@ -24,161 +26,351 @@ interface AgentPipelineViewProps {
   className?: string;
 }
 
-export const AgentPipelineView: React.FC<AgentPipelineViewProps> = ({ isRunning, latencyS, className }) => {
-  const [activeIdx, setActiveIdx]     = useState(-1);
-  const [doneSet, setDoneSet]         = useState<Set<number>>(new Set());
-  const intervalRef                   = useRef<ReturnType<typeof setInterval> | null>(null);
+export const AgentPipelineView: React.FC<AgentPipelineViewProps> = ({
+  isRunning,
+  latencyS,
+  className,
+}) => {
+  const [activeIdx, setActiveIdx] = useState(-1);
+  const [doneSet, setDoneSet] = useState<Set<number>>(new Set());
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const prefersReduced =
+    typeof window !== 'undefined' &&
+    window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
   useEffect(() => {
     if (isRunning) {
-      setActiveIdx(0); setDoneSet(new Set());
+      setActiveIdx(0);
+      setDoneSet(new Set());
       let i = 0;
       intervalRef.current = setInterval(() => {
         i++;
-        if (i < NODES.length) { setActiveIdx(i); setDoneSet(prev => new Set([...prev, i - 1])); }
-        else { clearInterval(intervalRef.current!); setActiveIdx(-1); setDoneSet(new Set(NODES.map((_, j) => j))); }
+        if (i < NODES.length) {
+          setActiveIdx(i);
+          setDoneSet(prev => new Set([...prev, i - 1]));
+        } else {
+          clearInterval(intervalRef.current!);
+          setActiveIdx(-1);
+          setDoneSet(new Set(NODES.map((_, j) => j)));
+        }
       }, NODE_DURATION_MS);
     } else {
       if (intervalRef.current) clearInterval(intervalRef.current);
-      if (latencyS !== undefined) { setActiveIdx(-1); setDoneSet(new Set(NODES.map((_, j) => j))); }
-      else { setActiveIdx(-1); setDoneSet(new Set()); }
+      if (latencyS !== undefined) {
+        if (prefersReduced) {
+          setActiveIdx(-1);
+          setDoneSet(new Set(NODES.map((_, j) => j)));
+        } else {
+          // Staggered reveal on initial mount
+          NODES.forEach((_, idx) => {
+            setTimeout(() => {
+              setDoneSet(prev => new Set([...prev, idx]));
+            }, idx * 75);
+          });
+        }
+      } else {
+        setActiveIdx(-1);
+        setDoneSet(new Set());
+      }
     }
-    return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
-  }, [isRunning, latencyS]);
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+    };
+  }, [isRunning, latencyS, prefersReduced]);
+
+  const completedCount = doneSet.size;
+  const progressRatio = Math.min(1, completedCount / (NODES.length - 1));
 
   return (
     <div
-      className={`nm-lg ${className ?? ''}`}
-      style={{ padding: '20px 24px' }}
+      className={`nm-xl ${className ?? ''}`}
+      style={{
+        padding: '24px 28px',
+        background: '#FFFFFF',
+        borderRadius: 20,
+        boxShadow:
+          '0 10px 25px -4px rgba(15, 23, 42, 0.06), 0 4px 10px -2px rgba(15, 23, 42, 0.03), 0 0 0 1px rgba(226, 232, 240, 0.8)',
+      }}
     >
-      {/* Header row */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
-        <div>
-          <span style={{ fontFamily: 'Space Grotesk, sans-serif', fontWeight: 700, fontSize: 15, color: 'var(--color-text)' }}>
-            🤖 Agent Pipeline
-          </span>
-          <span style={{ fontSize: 11, color: 'var(--color-text-muted)', marginLeft: 8, fontFamily: 'JetBrains Mono, monospace' }}>
-            LangGraph 8-node state machine
-          </span>
+      {/* Header Row */}
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          marginBottom: 24,
+          flexWrap: 'wrap',
+          gap: 12,
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div
+            style={{
+              width: 38,
+              height: 38,
+              borderRadius: 11,
+              background: 'linear-gradient(135deg, #EEF2F6 0%, #E2E8F0 100%)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: 18,
+              boxShadow: '0 2px 6px rgba(15, 23, 42, 0.06)',
+            }}
+          >
+            🤖
+          </div>
+          <div>
+            <div
+              style={{
+                fontFamily: 'Space Grotesk, sans-serif',
+                fontWeight: 700,
+                fontSize: 15,
+                color: 'var(--color-text)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8,
+              }}
+            >
+              Agent Execution Pipeline
+            </div>
+            <div
+              style={{
+                fontSize: 11,
+                color: 'var(--color-text-muted)',
+                fontFamily: 'JetBrains Mono, monospace',
+                marginTop: 1,
+              }}
+            >
+              LangGraph 8-node state machine · TigerGraph Savanna
+            </div>
+          </div>
         </div>
+
+        {/* Right Status Badge */}
         <AnimatePresence mode="wait">
           {isRunning ? (
-            <motion.span key="running" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-              style={{ fontSize: 11, fontWeight: 700, color: 'var(--color-risk-med)', fontFamily: 'JetBrains Mono, monospace' }}
+            <motion.div
+              key="running"
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0 }}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 6,
+                background: 'rgba(217, 119, 6, 0.12)',
+                border: '1px solid rgba(217, 119, 6, 0.3)',
+                color: '#B45309',
+                padding: '4px 12px',
+                borderRadius: 20,
+                fontSize: 11,
+                fontWeight: 700,
+                fontFamily: 'JetBrains Mono, monospace',
+              }}
             >
-              ⏱ Investigating… (estimated timing)
-            </motion.span>
+              <motion.span
+                animate={{ rotate: 360 }}
+                transition={{ duration: 1.5, repeat: Infinity, ease: 'linear' }}
+              >
+                ⚙
+              </motion.span>
+              <span>Investigating in graph...</span>
+            </motion.div>
           ) : latencyS !== undefined ? (
-            <motion.span key="done" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-              style={{ fontSize: 11, fontWeight: 700, color: 'var(--color-risk-low)' }}
+            <motion.div
+              key="done"
+              initial={{ opacity: 0, scale: 0.92 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0 }}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 6,
+                background: 'rgba(5, 150, 105, 0.12)',
+                border: '1px solid rgba(5, 150, 105, 0.32)',
+                color: '#047857',
+                padding: '4px 12px',
+                borderRadius: 20,
+                fontSize: 11,
+                fontWeight: 700,
+                fontFamily: 'JetBrains Mono, monospace',
+              }}
             >
-              ✓ Completed in {latencyS.toFixed(1)}s
-            </motion.span>
+              <span style={{ fontSize: 13 }}>✓</span>
+              <span>Completed in {latencyS.toFixed(1)}s</span>
+            </motion.div>
           ) : (
-            <span style={{ fontSize: 11, color: 'var(--color-text-muted)' }}>Idle</span>
+            <span
+              style={{
+                fontSize: 11,
+                color: 'var(--color-text-muted)',
+                fontFamily: 'JetBrains Mono, monospace',
+              }}
+            >
+              Standby
+            </span>
           )}
         </AnimatePresence>
       </div>
 
-      {/* Pipeline row */}
-      <div style={{ display: 'flex', alignItems: 'center', overflowX: 'auto', gap: 0, paddingBottom: 4 }}>
-        {NODES.map((node, i) => {
-          const isActive = activeIdx === i;
-          const isDone   = doneSet.has(i);
+      {/* Process Trace Rail with Nodes */}
+      <div style={{ position: 'relative', padding: '10px 0 6px', overflowX: 'auto' }}>
+        {/* Continuous Track Container */}
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'flex-start',
+            justifyContent: 'space-between',
+            position: 'relative',
+            minWidth: 700,
+          }}
+        >
+          {/* Continuous Rail Line behind nodes */}
+          <div
+            style={{
+              position: 'absolute',
+              top: 20,
+              left: 24,
+              right: 24,
+              height: 4,
+              background: '#EEF2F6',
+              borderRadius: 4,
+              zIndex: 1,
+            }}
+          >
+            {/* Animated Completed Fill */}
+            <motion.div
+              style={{
+                height: '100%',
+                background: 'linear-gradient(90deg, #3B82F6 0%, #10B981 100%)',
+                borderRadius: 4,
+                transformOrigin: 'left',
+              }}
+              initial={{ scaleX: 0 }}
+              animate={{ scaleX: progressRatio }}
+              transition={{ duration: 0.6, ease: [0.34, 1.56, 0.64, 1] }}
+            />
+          </div>
 
-          return (
-            <React.Fragment key={node.id}>
-              {/* Node */}
+          {/* Step Nodes */}
+          {NODES.map((node, i) => {
+            const isActive = activeIdx === i;
+            const isDone = doneSet.has(i);
+
+            return (
               <motion.div
-                animate={{ scale: isActive ? 1.1 : 1 }}
-                transition={{ type: 'spring', stiffness: 320, damping: 22 }}
-                style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, flexShrink: 0 }}
-                title={node.desc}
+                key={node.id}
+                title={`${node.label}: ${node.desc}`}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: i * 0.05, duration: 0.3 }}
+                style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  gap: 8,
+                  position: 'relative',
+                  zIndex: 2,
+                  width: 72,
+                }}
               >
-                {/* Circle */}
-                <div
-                  style={{
-                    width: 48, height: 48, borderRadius: '50%',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontSize: 18,
-                    background: 'var(--nm-surface)',
-                    boxShadow: isActive
-                      ? `var(--shadow-nm-md), 0 0 0 2px var(--color-brand)`
-                      : isDone
-                      ? `var(--shadow-nm-sm), 0 0 0 2px var(--color-risk-low)44`
-                      : `var(--shadow-nm-sm)`,
-                    transition: 'box-shadow 0.3s ease',
-                    position: 'relative',
+                {/* Node Badge */}
+                <motion.div
+                  animate={{
+                    scale: isActive ? 1.15 : isDone ? 1.05 : 1,
                   }}
-                  aria-label={`${node.label}: ${isActive ? 'running' : isDone ? 'complete' : 'pending'}`}
+                  transition={{ type: 'spring', stiffness: 350, damping: 22 }}
+                  style={{
+                    width: 40,
+                    height: 40,
+                    borderRadius: '50%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    background: isDone
+                      ? '#10B981'
+                      : isActive
+                      ? '#3B82F6'
+                      : '#FFFFFF',
+                    border: isDone
+                      ? '2.5px solid #FFFFFF'
+                      : isActive
+                      ? '2.5px solid #FFFFFF'
+                      : '2px solid #CBD5E1',
+                    boxShadow: isDone
+                      ? '0 4px 12px rgba(16, 185, 129, 0.35), 0 1px 3px rgba(0,0,0,0.1)'
+                      : isActive
+                      ? '0 4px 14px rgba(59, 130, 246, 0.4)'
+                      : '0 2px 6px rgba(15, 23, 42, 0.06)',
+                    color: isDone || isActive ? '#FFFFFF' : '#475569',
+                    fontSize: isDone ? 15 : 16,
+                    fontWeight: 800,
+                    position: 'relative',
+                    transition: 'background 0.25s ease, border-color 0.25s ease',
+                  }}
                 >
                   {isDone ? (
-                    <span style={{ color: 'var(--color-risk-low)', fontWeight: 800, fontSize: 16 }}>✓</span>
+                    <motion.span
+                      initial={{ scale: 0 }}
+                      animate={{ scale: 1 }}
+                      transition={{ type: 'spring', stiffness: 450, damping: 18 }}
+                    >
+                      ✓
+                    </motion.span>
                   ) : (
                     <span>{node.icon}</span>
                   )}
-                  {/* Active pulse ring */}
+
+                  {/* Active Ring Pulse */}
                   {isActive && (
-                    <motion.span
-                      style={{ position: 'absolute', inset: -3, borderRadius: '50%', border: `2px solid var(--color-brand)` }}
-                      initial={{ opacity: 0.8, scale: 1 }}
-                      animate={{ opacity: 0, scale: 1.6 }}
-                      transition={{ duration: 0.9, repeat: Infinity }}
-                      aria-hidden="true"
+                    <motion.div
+                      style={{
+                        position: 'absolute',
+                        inset: -4,
+                        borderRadius: '50%',
+                        border: '2px solid #3B82F6',
+                      }}
+                      animate={{ opacity: [0.8, 0], scale: [1, 1.45] }}
+                      transition={{ duration: 1.1, repeat: Infinity, ease: 'easeOut' }}
                     />
                   )}
+                </motion.div>
+
+                {/* Step Text Label */}
+                <div style={{ textAlign: 'center' }}>
+                  <div
+                    style={{
+                      fontSize: 11,
+                      fontWeight: isDone || isActive ? 700 : 600,
+                      color: isDone
+                        ? '#047857'
+                        : isActive
+                        ? '#1D4ED8'
+                        : '#64748B',
+                      lineHeight: 1.2,
+                      fontFamily: 'Inter, sans-serif',
+                      transition: 'color 0.2s ease',
+                    }}
+                  >
+                    {node.label}
+                  </div>
+                  <div
+                    style={{
+                      fontSize: 9,
+                      color: '#94A3B8',
+                      fontFamily: 'JetBrains Mono, monospace',
+                      marginTop: 2,
+                    }}
+                  >
+                    0{i + 1}
+                  </div>
                 </div>
-                {/* Label */}
-                <span style={{
-                  fontSize: 10, fontWeight: 700, textAlign: 'center', maxWidth: 60, lineHeight: 1.2,
-                  color: isActive ? 'var(--color-brand)' : isDone ? 'var(--color-risk-low)' : 'var(--color-text-muted)',
-                  transition: 'color 0.3s ease',
-                }}>
-                  {node.label}
-                </span>
               </motion.div>
-
-              {/* Connector */}
-              {i < NODES.length - 1 && (
-                <div style={{ width: 32, height: 3, position: 'relative', flexShrink: 0, marginBottom: 22 }}>
-                  {/* Track */}
-                  <div style={{
-                    position: 'absolute', inset: 0, borderRadius: 2,
-                    background: 'var(--nm-surface)',
-                    boxShadow: 'var(--shadow-nm-inset-sm)',
-                  }} />
-                  {/* Progress fill */}
-                  <AnimatePresence>
-                    {(doneSet.has(i) && doneSet.has(i + 1)) && (
-                      <motion.div
-                        key={`fill-${i}`}
-                        style={{ position: 'absolute', inset: 0, borderRadius: 2, background: 'var(--color-risk-low)', opacity: 0.7 }}
-                        initial={{ scaleX: 0 }} animate={{ scaleX: 1 }} exit={{ opacity: 0 }}
-                        transition={{ duration: 0.3 }}
-                      />
-                    )}
-                    {isRunning && activeIdx === i + 1 && (
-                      <motion.div
-                        key={`travel-${i}`}
-                        style={{ position: 'absolute', inset: 0, borderRadius: 2, background: 'var(--color-brand)', transformOrigin: 'left' }}
-                        initial={{ scaleX: 0 }} animate={{ scaleX: 1 }} exit={{ opacity: 0 }}
-                        transition={{ duration: 0.4 }}
-                        aria-hidden="true"
-                      />
-                    )}
-                  </AnimatePresence>
-                </div>
-              )}
-            </React.Fragment>
-          );
-        })}
+            );
+          })}
+        </div>
       </div>
-
-      {isRunning && (
-        <p style={{ marginTop: 12, textAlign: 'center', fontSize: 10, color: 'var(--color-text-muted)', fontFamily: 'JetBrains Mono, monospace' }}>
-          Note: per-node timing is estimated — the agent runs as a single synchronous call.
-        </p>
-      )}
     </div>
   );
 };
