@@ -14,6 +14,7 @@ import { DecisionPanel } from '../components/DecisionPanel';
 import { NbaPanel } from '../components/NbaPanel';
 import { AgentPipelineView } from '../components/AgentPipelineView';
 import { SkeletonDetailPanel } from '../components/SkeletonCard';
+import { EvidenceAuditLog } from '../components/EvidenceAuditLog';
 import { formatUSD, formatConfidence, toTitleCase } from '../lib/utils';
 import { PATTERN_CONFIG } from '../lib/colorTokens';
 import type { FraudPattern } from '../api/types';
@@ -37,76 +38,238 @@ const PatternsPanel: React.FC<{ caseData: NonNullable<ReturnType<typeof useCaseD
     card_testing:                '#DB2777',
   };
 
+  const matchedCount = patternResults.filter(p => p.matched).length;
+
+  const prefersReduced =
+    typeof window !== 'undefined' &&
+    window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
   return (
-    <div className="nm-lg" style={{ padding: '24px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 20 }}>
-        <div className="nm-sm" style={{ width: 42, height: 42, borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, flexShrink: 0 }}>
-          🕸
-        </div>
-        <div>
-          <div style={{ fontFamily: 'Space Grotesk, sans-serif', fontWeight: 700, fontSize: 15, color: 'var(--color-text)' }}>
-            Fraud Pattern Scan
+    <div
+      style={{
+        padding: '24px 28px',
+        background: '#FFFFFF',
+        borderRadius: 20,
+        boxShadow:
+          '0 10px 25px -4px rgba(15, 23, 42, 0.06), 0 4px 10px -2px rgba(15, 23, 42, 0.03), 0 0 0 1px rgba(226, 232, 240, 0.8)',
+        display: 'flex',
+        flexDirection: 'column',
+        height: '100%',
+      }}
+    >
+      {/* Header */}
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          marginBottom: 16,
+          flexWrap: 'wrap',
+          gap: 12,
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div
+            style={{
+              width: 38,
+              height: 38,
+              borderRadius: 11,
+              background: 'linear-gradient(135deg, #EEF2F6 0%, #E2E8F0 100%)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: 18,
+              boxShadow: '0 2px 6px rgba(15, 23, 42, 0.06)',
+              flexShrink: 0,
+            }}
+          >
+            🕸
           </div>
-          <div style={{ fontSize: 11, color: 'var(--color-text-muted)' }}>
-            5 GSQL pattern queries · TigerGraph
+          <div>
+            <div
+              style={{
+                fontFamily: 'Space Grotesk, sans-serif',
+                fontWeight: 700,
+                fontSize: 15,
+                color: 'var(--color-text)',
+              }}
+            >
+              Fraud Pattern Scan
+            </div>
+            <div
+              style={{
+                fontSize: 11,
+                color: 'var(--color-text-muted)',
+                fontFamily: 'JetBrains Mono, monospace',
+                marginTop: 1,
+              }}
+            >
+              5 GSQL pattern queries · TigerGraph
+            </div>
           </div>
         </div>
+
+        {/* Live summary badge */}
+        {patternResults.length > 0 && (
+          <span
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              padding: '4px 10px',
+              borderRadius: 20,
+              fontSize: 11,
+              fontWeight: 700,
+              fontFamily: 'JetBrains Mono, monospace',
+              background: matchedCount > 0 ? 'rgba(239, 68, 68, 0.1)' : '#F1F5F9',
+              border: `1px solid ${matchedCount > 0 ? 'rgba(239, 68, 68, 0.25)' : '#CBD5E1'}`,
+              color: matchedCount > 0 ? '#B91C1C' : '#475569',
+            }}
+          >
+            {matchedCount} of {patternResults.length} matched
+          </span>
+        )}
       </div>
 
-      <div className="nm-divider" style={{ marginBottom: 20 }} />
+      <div className="nm-divider" style={{ marginBottom: 16 }} />
 
       {patternResults.length === 0 ? (
-        <div className="nm-inset" style={{ padding: '16px', fontSize: 13, color: 'var(--color-text-muted)', fontStyle: 'italic', display: 'flex', alignItems: 'center', gap: 12 }}>
+        <div
+          style={{
+            padding: '16px',
+            fontSize: 13,
+            color: '#64748B',
+            fontStyle: 'italic',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 12,
+            background: '#F8FAFC',
+            borderRadius: 14,
+            border: '1px solid #E2E8F0',
+          }}
+        >
           <span>Pattern evidence not in response. Primary: </span>
           <PatternTag pattern={c.pattern} showFull />
         </div>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          {patternResults.map(({ patternName, matched, claim }) => {
-            const accent = riskColors[patternName] ?? '#5C6B85';
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10, flex: 1 }}>
+          {patternResults.map(({ patternName, matched, claim }, idx) => {
+            const accent = riskColors[patternName] ?? '#475569';
             const riskMatch = claim.match(/(\d+) risk indicators/);
             const riskCount = riskMatch ? parseInt(riskMatch[1]) : 0;
 
             return (
-              <div
+              <motion.div
                 key={patternName}
-                className={matched ? 'nm-inset-sm' : 'nm-flat'}
+                initial={prefersReduced ? false : { opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: prefersReduced ? 0 : idx * 0.06, duration: 0.25 }}
                 style={{
-                  padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 12,
-                  opacity: matched ? 1 : 0.5,
-                  boxShadow: matched
-                    ? `var(--shadow-nm-inset-sm), 0 0 0 1px ${accent}33`
-                    : 'var(--shadow-nm-flat)',
+                  padding: '12px 16px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 12,
+                  borderRadius: 14,
+                  background: matched ? `${accent}10` : '#F8FAFC',
+                  border: matched ? `1px solid ${accent}40` : '1px solid #E2E8F0',
+                  borderLeft: matched ? `4px solid ${accent}` : '4px solid #CBD5E1',
+                  boxShadow: '0 1px 3px rgba(15, 23, 42, 0.03)',
+                  transition: 'all 0.2s ease',
                 }}
                 role="listitem"
                 aria-label={`${patternName}: ${matched ? 'matched' : 'not matched'}`}
               >
-                {/* Status dot */}
-                <div style={{
-                  width: 32, height: 32, borderRadius: '50%', flexShrink: 0,
-                  background: 'var(--nm-surface)',
-                  boxShadow: matched ? `var(--shadow-nm-sm), 0 0 0 2px ${accent}44` : 'var(--shadow-nm-sm)',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: 14,
-                }}>
-                  {matched ? '🔴' : '⚪'}
+                {/* Status Dot / Icon */}
+                <div
+                  style={{
+                    width: 26,
+                    height: 26,
+                    borderRadius: '50%',
+                    flexShrink: 0,
+                    background: matched ? `${accent}22` : '#EEF2F6',
+                    border: `1.5px solid ${matched ? accent : '#CBD5E1'}`,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: matched ? 12 : 10,
+                    fontWeight: 900,
+                    color: matched ? accent : '#94A3B8',
+                  }}
+                >
+                  {matched ? '✓' : '○'}
                 </div>
+
+                {/* Pattern Tag & Signals */}
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                     <PatternTag pattern={patternName} showFull />
                     {matched && riskCount > 0 && (
-                      <span className="nm-pill" style={{ fontSize: 10, padding: '2px 8px', color: accent, fontFamily: 'JetBrains Mono, monospace', fontWeight: 700 }}>
+                      <span
+                        style={{
+                          fontSize: 11,
+                          padding: '3px 8px',
+                          borderRadius: 12,
+                          background: '#FFFFFF',
+                          border: `1px solid ${accent}33`,
+                          color: accent,
+                          fontFamily: 'JetBrains Mono, monospace',
+                          fontWeight: 700,
+                        }}
+                      >
                         {riskCount} signal{riskCount !== 1 ? 's' : ''}
                       </span>
                     )}
-                    {!matched && <span style={{ fontSize: 10, color: 'var(--color-text-muted)', fontStyle: 'italic' }}>not triggered</span>}
+                    {!matched && (
+                      <span style={{ fontSize: 11, color: '#94A3B8', fontStyle: 'italic' }}>
+                        not triggered
+                      </span>
+                    )}
                   </div>
                 </div>
-                {/* Right: matched indicator */}
-                <div style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 10, fontWeight: 700, color: matched ? accent : 'var(--color-text-muted)', flexShrink: 0 }}>
-                  {matched ? '● MATCH' : '○ MISS'}
+
+                {/* Right MATCH / MISS badge */}
+                <div style={{ flexShrink: 0 }}>
+                  {matched ? (
+                    <span
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: 4,
+                        padding: '4px 10px',
+                        borderRadius: 20,
+                        background: `${accent}20`,
+                        border: `1px solid ${accent}55`,
+                        color: accent,
+                        fontFamily: 'JetBrains Mono, monospace',
+                        fontSize: 11,
+                        fontWeight: 800,
+                        letterSpacing: '0.04em',
+                      }}
+                    >
+                      <span>✓</span>
+                      <span>MATCH</span>
+                    </span>
+                  ) : (
+                    <span
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: 4,
+                        padding: '4px 10px',
+                        borderRadius: 20,
+                        background: '#F1F5F9',
+                        border: '1px solid #CBD5E1',
+                        color: '#64748B',
+                        fontFamily: 'JetBrains Mono, monospace',
+                        fontSize: 11,
+                        fontWeight: 700,
+                      }}
+                    >
+                      <span>○</span>
+                      <span>MISS</span>
+                    </span>
+                  )}
                 </div>
-              </div>
+              </motion.div>
             );
           })}
         </div>
@@ -114,6 +277,7 @@ const PatternsPanel: React.FC<{ caseData: NonNullable<ReturnType<typeof useCaseD
     </div>
   );
 };
+
 
 /* ── SAR Panel ──────────────────────────────────────────────── */
 const SarPanel: React.FC<{ caseData: NonNullable<ReturnType<typeof useCaseDetail>['caseData']> }> = ({ caseData }) => {
@@ -685,39 +849,60 @@ export const CaseDetailPage: React.FC = () => {
 
       {/* Details tab */}
       {activeTab === 'details' && (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} role="tabpanel" style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
+        <motion.div
+          initial={prefersReduced ? false : { opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.3 }}
+          role="tabpanel"
+          style={{ display: 'flex', flexDirection: 'column', gap: 20 }}
+        >
+          {/* Row 1: Fraud Pattern Scan & Similar Prior Cases */}
+          <motion.div
+            initial={prefersReduced ? false : { opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3, delay: prefersReduced ? 0 : 0.04 }}
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))',
+              gap: 20,
+              alignItems: 'stretch',
+            }}
+          >
             <PatternsPanel caseData={caseData} />
             <SimilarCasesPanel caseData={caseData} />
-          </div>
-          <DecisionPanel caseData={caseData} />
-          <NbaPanel caseData={caseData} />
+          </motion.div>
 
-          {/* Evidence audit log */}
-          <details className="nm-lg" style={{ overflow: 'hidden' }}>
-            <summary style={{ padding: '18px 24px', fontFamily: 'Space Grotesk, sans-serif', fontWeight: 700, fontSize: 14, color: 'var(--color-text)', cursor: 'pointer', userSelect: 'none', display: 'flex', alignItems: 'center', gap: 8 }}>
-              📋 Evidence Audit Log
-              <span className="nm-pill" style={{ fontSize: 10, padding: '2px 8px', color: 'var(--color-text-muted)' }}>
-                {c.evidence.length} entries
-              </span>
-            </summary>
-            <div style={{ padding: '0 24px 20px', maxHeight: 280, overflowY: 'auto' }}>
-              <div className="nm-divider" style={{ marginBottom: 14 }} />
-              {c.evidence.map((ev, i) => (
-                <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '8px 0', borderBottom: '1px solid var(--nm-shadow-dark)', opacity: 0.9 }}>
-                  <div style={{ width: 8, height: 8, borderRadius: '50%', flexShrink: 0, marginTop: 4, background: ev.source === 'graph' ? 'var(--color-brand)' : 'var(--color-text-muted)' }} />
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 10, color: 'var(--color-text-muted)', marginRight: 8 }}>[{ev.ref}]</span>
-                    <span style={{ fontSize: 12, color: 'var(--color-text-secondary)' }}>{ev.claim.slice(0, 130)}</span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </details>
+          {/* Gemini Decision Card */}
+          <motion.div
+            initial={prefersReduced ? false : { opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3, delay: prefersReduced ? 0 : 0.1 }}
+          >
+            <DecisionPanel caseData={caseData} />
+          </motion.div>
+
+          {/* Next Best Actions Card */}
+          <motion.div
+            initial={prefersReduced ? false : { opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3, delay: prefersReduced ? 0 : 0.16 }}
+          >
+            <NbaPanel caseData={caseData} />
+          </motion.div>
+
+          {/* Evidence Audit Log Card */}
+          <motion.div
+            initial={prefersReduced ? false : { opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3, delay: prefersReduced ? 0 : 0.22 }}
+          >
+            <EvidenceAuditLog evidence={c.evidence} />
+          </motion.div>
         </motion.div>
       )}
     </div>
   );
 };
+
 
 
