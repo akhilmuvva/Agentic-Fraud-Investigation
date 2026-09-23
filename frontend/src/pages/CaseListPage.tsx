@@ -13,6 +13,7 @@ import { postInvestigate, ApiClientError } from '../api/client';
 import type { InvestigateRequest, FraudPattern, Verdict, CaseDetail } from '../api/types';
 import { useNavigate } from 'react-router-dom';
 import { formatUSD } from '../lib/utils';
+import { FilterBar } from '../components/FilterBar';
 
 const FRAUD_PATTERNS: FraudPattern[] = [
   'card_not_present_fraud',
@@ -196,42 +197,41 @@ const NewInvestigationDrawer: React.FC<DrawerProps> = ({ onClose, onComplete }) 
   );
 };
 
-/* ── Filter pill button ─────────────────────────────────────── */
-const FilterBtn: React.FC<{ active: boolean; onClick: () => void; children: React.ReactNode; danger?: boolean }> = ({ active, onClick, children, danger }) => (
-  <button
-    onClick={onClick}
-    style={{
-      background: 'var(--nm-surface)',
-      boxShadow: active ? `var(--shadow-nm-inset-sm), 0 0 0 2px ${danger ? 'var(--color-risk-high)' : 'var(--color-brand)'}55` : 'var(--shadow-nm-sm)',
-      borderRadius: 20, border: 'none', padding: '5px 12px', cursor: 'pointer',
-      transition: 'box-shadow 0.18s ease',
-      opacity: active ? 1 : 0.75,
-    }}
-    onMouseEnter={e => !active && ((e.currentTarget as HTMLElement).style.opacity = '1')}
-    onMouseLeave={e => !active && ((e.currentTarget as HTMLElement).style.opacity = '0.75')}
-    aria-pressed={active}
-  >
-    {children}
-  </button>
-);
-
 /* ── Main CaseListPage ──────────────────────────────────────── */
 export const CaseListPage: React.FC = () => {
   const { cases, loading, error, refetch } = useCases();
   const navigate = useNavigate();
-  const [showDrawer, setShowDrawer]       = useState(false);
-  const [patternFilter, setPatternFilter] = useState<FraudPattern | null>(null);
-  const [verdictFilter, setVerdictFilter] = useState<Verdict | null>(null);
-  const [sarFilter, setSarFilter]         = useState<boolean | null>(null);
+  const [showDrawer, setShowDrawer]             = useState(false);
+  const [selectedPatterns, setSelectedPatterns] = useState<FraudPattern[]>([]);
+  const [selectedVerdicts, setSelectedVerdicts] = useState<Verdict[]>([]);
+  const [sarRequired, setSarRequired]           = useState<boolean>(false);
+
+  const togglePattern = (pattern: FraudPattern) => {
+    setSelectedPatterns(prev =>
+      prev.includes(pattern) ? prev.filter(p => p !== pattern) : [...prev, pattern]
+    );
+  };
+
+  const toggleVerdict = (verdict: Verdict) => {
+    setSelectedVerdicts(prev =>
+      prev.includes(verdict) ? prev.filter(v => v !== verdict) : [...prev, verdict]
+    );
+  };
+
+  const toggleSar = () => setSarRequired(prev => !prev);
+
+  const clearAllFilters = () => {
+    setSelectedPatterns([]);
+    setSelectedVerdicts([]);
+    setSarRequired(false);
+  };
 
   const filtered = useMemo(() => cases.filter(c => {
-    if (patternFilter && c.case.pattern !== patternFilter) return false;
-    if (verdictFilter && c.case.verdict !== verdictFilter) return false;
-    if (sarFilter !== null && c.sar.file !== sarFilter) return false;
+    if (selectedPatterns.length > 0 && !selectedPatterns.includes(c.case.pattern as FraudPattern)) return false;
+    if (selectedVerdicts.length > 0 && !selectedVerdicts.includes(c.case.verdict as Verdict)) return false;
+    if (sarRequired && !c.sar.file) return false;
     return true;
-  }), [cases, patternFilter, verdictFilter, sarFilter]);
-
-  const hasFilters = patternFilter || verdictFilter || sarFilter !== null;
+  }), [cases, selectedPatterns, selectedVerdicts, sarRequired]);
 
   return (
     <div style={{ maxWidth: 960, margin: '0 auto', padding: '32px 24px' }}>
@@ -257,44 +257,18 @@ export const CaseListPage: React.FC = () => {
       {/* Stats */}
       {!loading && cases.length > 0 && <StatsRow cases={cases} />}
 
-      {/* Filters */}
-      <div className="nm-inset" style={{ padding: '14px 18px', marginBottom: 20, display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
-        <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginRight: 4 }}>Filter</span>
-
-        {FRAUD_PATTERNS.map(p => (
-          <FilterBtn key={p} active={patternFilter === p} onClick={() => setPatternFilter(patternFilter === p ? null : p)}>
-            <PatternTag pattern={p} showFull={false} />
-          </FilterBtn>
-        ))}
-
-        <div style={{ width: 1, height: 20, background: 'var(--nm-shadow-dark)', opacity: 0.5, margin: '0 4px' }} />
-
-        {VERDICTS.map(v => (
-          <FilterBtn key={v} active={verdictFilter === v} onClick={() => setVerdictFilter(verdictFilter === v ? null : v)}>
-            <VerdictBadge verdict={v} size="sm" />
-          </FilterBtn>
-        ))}
-
-        <div style={{ width: 1, height: 20, background: 'var(--nm-shadow-dark)', opacity: 0.5, margin: '0 4px' }} />
-
-        <FilterBtn active={sarFilter === true} onClick={() => setSarFilter(sarFilter === true ? null : true)} danger>
-          <span style={{ fontSize: 11, fontWeight: 700, color: sarFilter ? 'var(--color-risk-high)' : 'var(--color-text-secondary)' }}>⚑ SAR Required</span>
-        </FilterBtn>
-
-        {hasFilters && (
-          <button onClick={() => { setPatternFilter(null); setVerdictFilter(null); setSarFilter(null); }}
-            style={{ fontSize: 11, color: 'var(--color-text-muted)', textDecoration: 'underline', background: 'none', border: 'none', cursor: 'pointer', padding: '0 4px' }}
-          >
-            Clear all
-          </button>
-        )}
-
-        {!loading && (
-          <span style={{ marginLeft: 'auto', fontSize: 11, color: 'var(--color-text-muted)', fontFamily: 'JetBrains Mono, monospace' }}>
-            {filtered.length} / {cases.length}
-          </span>
-        )}
-      </div>
+      {/* Interactive Filter Bar */}
+      <FilterBar
+        selectedPatterns={selectedPatterns}
+        onTogglePattern={togglePattern}
+        selectedVerdicts={selectedVerdicts}
+        onToggleVerdict={toggleVerdict}
+        sarRequired={sarRequired}
+        onToggleSar={toggleSar}
+        filteredCount={filtered.length}
+        totalCount={cases.length}
+        onClearAll={clearAllFilters}
+      />
 
       {/* Error */}
       {error && (
