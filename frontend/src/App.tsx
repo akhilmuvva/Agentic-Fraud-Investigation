@@ -31,17 +31,20 @@ const Header: React.FC<{ dark: boolean; onToggleDark: () => void }> = ({ dark, o
       {/* Logo */}
       <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: 14, textDecoration: 'none' }}>
         <div style={{
-          width: 44, height: 44, borderRadius: 14,
-          background: 'linear-gradient(135deg, #4F7EF7 0%, #6B5CF6 100%)',
-          boxShadow: '5px 5px 14px rgba(79,126,247,0.4), -3px -3px 10px rgba(255,255,255,0.5)',
+          width: 42, height: 42, borderRadius: 13,
+          background: 'linear-gradient(135deg, #1E40AF 0%, #3B82F6 45%, #6366F1 100%)',
+          boxShadow: '0 4px 14px rgba(37, 99, 235, 0.35), inset 0 1px 1px rgba(255, 255, 255, 0.45), inset 0 -1px 2px rgba(0, 0, 0, 0.2)',
+          border: '1px solid rgba(255, 255, 255, 0.3)',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           color: '#fff', fontFamily: 'Space Grotesk, sans-serif', fontWeight: 800, fontSize: 15,
+          letterSpacing: '0.04em',
+          flexShrink: 0,
         }}>TG</div>
         <div>
-          <div style={{ fontFamily: 'Space Grotesk, sans-serif', fontWeight: 700, fontSize: 16, color: 'var(--color-text)', letterSpacing: '-0.02em' }}>
+          <div style={{ fontFamily: 'Space Grotesk, sans-serif', fontWeight: 800, fontSize: 16.5, color: 'var(--color-text)', letterSpacing: '-0.025em' }}>
             Fraud Investigation
           </div>
-          <div style={{ fontSize: 10, color: 'var(--color-text-muted)', marginTop: -1, fontFamily: 'JetBrains Mono, monospace' }}>
+          <div style={{ fontSize: 9.5, color: 'var(--color-text-muted)', marginTop: 1, fontFamily: 'JetBrains Mono, monospace', fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase' }}>
             TigerGraph · LangGraph · Gemini
           </div>
         </div>
@@ -50,14 +53,22 @@ const Header: React.FC<{ dark: boolean; onToggleDark: () => void }> = ({ dark, o
       {/* Right controls */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
         <HealthIndicator />
-        <button
+        <motion.button
           onClick={onToggleDark}
           className="nm-btn"
-          style={{ width: 42, height: 42, padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, borderRadius: 12 }}
+          whileHover={{ scale: 1.05, boxShadow: 'var(--shadow-nm-lg)' }}
+          whileTap={{ scale: 0.95 }}
+          transition={{ duration: 0.15 }}
+          style={{
+            width: 40, height: 40, padding: 0,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: 16, borderRadius: 12, cursor: 'pointer',
+            border: '1px solid transparent',
+          }}
           aria-label={dark ? 'Switch to light mode' : 'Switch to dark mode'}
         >
           {dark ? '☀' : '🌙'}
-        </button>
+        </motion.button>
       </div>
     </div>
   </header>

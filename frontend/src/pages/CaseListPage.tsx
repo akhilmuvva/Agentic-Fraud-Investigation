@@ -1,8 +1,8 @@
 /**
  * CaseListPage.tsx — Full neumorphic case list with filters, stats, and investigation drawer.
  */
-import React, { useState, useMemo } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import React, { useState, useEffect, useMemo } from 'react';
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { useCases } from '../hooks/useCases';
 import { CaseListItem } from '../components/CaseListItem';
 import { SkeletonCard } from '../components/SkeletonCard';
@@ -24,43 +24,294 @@ const FRAUD_PATTERNS: FraudPattern[] = [
 ];
 const VERDICTS: Verdict[] = ['fraud', 'uncertain', 'legitimate'];
 
+/* ── Animation helpers for KPI Stat Row ─────────────────────── */
+function easeOutQuad(t: number): number {
+  return t * (2 - t);
+}
+
+const CountUpNumber: React.FC<{ target: number; delayMs?: number; duration?: number }> = ({
+  target,
+  delayMs = 0,
+  duration = 750,
+}) => {
+  const shouldReduceMotion = useReducedMotion();
+  const [val, setVal] = useState(shouldReduceMotion ? target : 0);
+
+  useEffect(() => {
+    if (shouldReduceMotion) {
+      setVal(target);
+      return;
+    }
+    let startTime: number | null = null;
+    let animId: number;
+    const timer = setTimeout(() => {
+      const step = (timestamp: number) => {
+        if (!startTime) startTime = timestamp;
+        const elapsed = timestamp - startTime;
+        const progress = Math.min(elapsed / duration, 1);
+        const eased = easeOutQuad(progress);
+        setVal(Math.round(eased * target));
+        if (progress < 1) {
+          animId = requestAnimationFrame(step);
+        } else {
+          setVal(target);
+        }
+      };
+      animId = requestAnimationFrame(step);
+    }, delayMs);
+
+    return () => {
+      clearTimeout(timer);
+      if (animId) cancelAnimationFrame(animId);
+    };
+  }, [target, delayMs, duration, shouldReduceMotion]);
+
+  return <>{val}</>;
+};
+
+const CountUpExposure: React.FC<{ target: number; delayMs?: number; duration?: number }> = ({
+  target,
+  delayMs = 0,
+  duration = 850,
+}) => {
+  const shouldReduceMotion = useReducedMotion();
+  const [val, setVal] = useState(shouldReduceMotion ? target : 0);
+
+  useEffect(() => {
+    if (shouldReduceMotion) {
+      setVal(target);
+      return;
+    }
+    let startTime: number | null = null;
+    let animId: number;
+    const timer = setTimeout(() => {
+      const step = (timestamp: number) => {
+        if (!startTime) startTime = timestamp;
+        const elapsed = timestamp - startTime;
+        const progress = Math.min(elapsed / duration, 1);
+        const eased = easeOutQuad(progress);
+        setVal(eased * target);
+        if (progress < 1) {
+          animId = requestAnimationFrame(step);
+        } else {
+          setVal(target);
+        }
+      };
+      animId = requestAnimationFrame(step);
+    }, delayMs);
+
+    return () => {
+      clearTimeout(timer);
+      if (animId) cancelAnimationFrame(animId);
+    };
+  }, [target, delayMs, duration, shouldReduceMotion]);
+
+  return <>{formatUSD(val)}</>;
+};
+
+const InlineConfidenceArc: React.FC<{ confidence: number; delayMs?: number }> = ({
+  confidence,
+  delayMs = 0,
+}) => {
+  const shouldReduceMotion = useReducedMotion();
+  const radius = 14;
+  const strokeWidth = 3;
+  const circumference = 2 * Math.PI * radius; // ~87.96
+  const targetOffset = circumference * (1 - Math.min(Math.max(confidence, 0), 1));
+  const [offset, setOffset] = useState(shouldReduceMotion ? targetOffset : circumference);
+
+  useEffect(() => {
+    if (shouldReduceMotion) {
+      setOffset(targetOffset);
+      return;
+    }
+    const timer = setTimeout(() => {
+      setOffset(targetOffset);
+    }, delayMs);
+    return () => clearTimeout(timer);
+  }, [targetOffset, delayMs, shouldReduceMotion]);
+
+  const color =
+    confidence >= 0.7 ? '#EF4444'
+    : confidence >= 0.4 ? '#F59E0B'
+    : '#10B981';
+
+  return (
+    <svg width={32} height={32} viewBox="0 0 32 32" style={{ transform: 'rotate(-90deg)', flexShrink: 0 }}>
+      <circle
+        cx={16}
+        cy={16}
+        r={radius}
+        fill="transparent"
+        stroke="var(--nm-progress-bg, rgba(148, 163, 184, 0.2))"
+        strokeWidth={strokeWidth}
+      />
+      <circle
+        cx={16}
+        cy={16}
+        r={radius}
+        fill="transparent"
+        stroke={color}
+        strokeWidth={strokeWidth}
+        strokeDasharray={circumference}
+        strokeDashoffset={offset}
+        strokeLinecap="round"
+        style={{
+          transition: shouldReduceMotion ? 'none' : 'stroke-dashoffset 0.85s cubic-bezier(0.34, 1.56, 0.64, 1)',
+        }}
+      />
+    </svg>
+  );
+};
+
 /* ── Stats Row ─────────────────────────────────────────────── */
 const StatsRow: React.FC<{ cases: CaseDetail[] }> = ({ cases }) => {
-  const stats = [
-    { label: 'Total Cases',      value: cases.length,                                       suffix: '', accent: false },
-    { label: 'Fraud Confirmed',  value: cases.filter(c => c.case.verdict === 'fraud').length, suffix: '', accent: true  },
-    { label: 'SAR Filed',        value: cases.filter(c => c.sar.file).length,                suffix: '', accent: true  },
-    { label: 'Avg Confidence',   value: cases.length ? Math.round(cases.reduce((s, c) => s + c.case.fraud_probability, 0) / cases.length * 100) : 0, suffix: '%', accent: false },
-    { label: 'Total Exposure',   value: formatUSD(cases.reduce((s, c) => s + (c.case.exposure_usd || 0), 0)), suffix: '', accent: false, isStr: true },
+  const shouldReduceMotion = useReducedMotion();
+  const totalCases = cases.length;
+  const fraudCount = cases.filter(c => c.case.verdict === 'fraud').length;
+  const sarCount = cases.filter(c => c.sar.file).length;
+  const avgConfidence = totalCases
+    ? cases.reduce((s, c) => s + c.case.fraud_probability, 0) / totalCases
+    : 0;
+  const avgConfidencePercent = Math.round(avgConfidence * 100);
+  const totalExposure = cases.reduce((s, c) => s + (c.case.exposure_usd || 0), 0);
+
+  const tiles = [
+    {
+      id: 'total',
+      label: 'Total Cases',
+      accentColor: '#94A3B8',
+      icon: <span style={{ fontSize: 13, opacity: 0.65 }}>📁</span>,
+      renderValue: (delay: number) => (
+        <span style={{ color: 'var(--color-text)' }}>
+          <CountUpNumber target={totalCases} delayMs={delay} />
+        </span>
+      ),
+    },
+    {
+      id: 'fraud',
+      label: 'Fraud Confirmed',
+      accentColor: '#EF4444',
+      icon: <span style={{ fontSize: 13, color: '#EF4444' }}>⚠</span>,
+      renderValue: (delay: number) => (
+        <span style={{ color: '#DC2626' }}>
+          <CountUpNumber target={fraudCount} delayMs={delay} />
+        </span>
+      ),
+    },
+    {
+      id: 'sar',
+      label: 'SAR Filed',
+      accentColor: '#F59E0B',
+      icon: <span style={{ fontSize: 13, color: '#F59E0B' }}>⚑</span>,
+      renderValue: (delay: number) => (
+        <span style={{ color: '#D97706' }}>
+          <CountUpNumber target={sarCount} delayMs={delay} />
+        </span>
+      ),
+    },
+    {
+      id: 'confidence',
+      label: 'Avg Confidence',
+      accentColor: '#8B5CF6',
+      icon: <span style={{ fontSize: 13, color: '#8B5CF6' }}>🎯</span>,
+      renderValue: (delay: number) => (
+        <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, justifyContent: 'center' }}>
+          <InlineConfidenceArc confidence={avgConfidence} delayMs={delay} />
+          <span style={{ color: 'var(--color-text)' }}>
+            <CountUpNumber target={avgConfidencePercent} delayMs={delay} />%
+          </span>
+        </div>
+      ),
+    },
+    {
+      id: 'exposure',
+      label: 'Total Exposure',
+      accentColor: '#3B82F6',
+      icon: <span style={{ fontSize: 13, color: '#3B82F6', fontWeight: 800 }}>$</span>,
+      renderValue: (delay: number) => (
+        <span style={{ color: 'var(--color-text)', fontSize: 20 }}>
+          <CountUpExposure target={totalExposure} delayMs={delay} />
+        </span>
+      ),
+    },
   ];
 
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: 16, marginBottom: 28 }}>
-      {stats.map((s, i) => (
-        <motion.div
-          key={s.label}
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: i * 0.06, duration: 0.4, ease: [0.34, 1.56, 0.64, 1] }}
-          className="nm-inset"
-          style={{ padding: '20px 16px', textAlign: 'center' }}
-        >
-          <div
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 14, marginBottom: 24 }}>
+      {tiles.map((tile, i) => {
+        const delay = i * 80;
+        return (
+          <motion.div
+            key={tile.id}
+            initial={shouldReduceMotion ? false : { opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{
+              duration: shouldReduceMotion ? 0 : 0.4,
+              delay: shouldReduceMotion ? 0 : i * 0.08,
+              ease: [0.34, 1.56, 0.64, 1],
+            }}
+            whileHover={shouldReduceMotion ? undefined : {
+              y: -2.5,
+              boxShadow: 'var(--shadow-nm-lg)',
+            }}
             style={{
-              fontFamily: 'Space Grotesk, monospace',
-              fontSize: (s as any).isStr ? 18 : 28,
-              fontWeight: 800,
-              letterSpacing: '-0.03em',
-              color: s.accent && Number(s.value) > 0 ? 'var(--color-risk-high)' : 'var(--color-text)',
-              lineHeight: 1,
-              marginBottom: 6,
+              position: 'relative',
+              overflow: 'hidden',
+              borderRadius: 16,
+              background: 'var(--nm-surface)',
+              boxShadow: 'var(--shadow-nm-md)',
+              padding: '16px 14px 18px',
+              textAlign: 'center',
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'space-between',
+              minHeight: 96,
             }}
           >
-            {s.value}{s.suffix}
-          </div>
-          <div style={{ fontSize: 11, color: 'var(--color-text-muted)', fontWeight: 600 }}>{s.label}</div>
-        </motion.div>
-      ))}
+            {/* Top accent bar */}
+            <div
+              style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                height: 3,
+                background: tile.accentColor,
+              }}
+            />
+
+            {/* Top header row: Label + Icon */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, marginBottom: 8 }}>
+              {tile.icon}
+              <span
+                style={{
+                  fontSize: 10.5,
+                  fontWeight: 700,
+                  color: 'var(--color-text-muted)',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.04em',
+                }}
+              >
+                {tile.label}
+              </span>
+            </div>
+
+            {/* Value */}
+            <div
+              style={{
+                fontFamily: 'Space Grotesk, sans-serif',
+                fontSize: 26,
+                fontWeight: 800,
+                letterSpacing: '-0.03em',
+                lineHeight: 1.1,
+              }}
+            >
+              {tile.renderValue(delay)}
+            </div>
+          </motion.div>
+        );
+      })}
     </div>
   );
 };
@@ -233,42 +484,100 @@ export const CaseListPage: React.FC = () => {
     return true;
   }), [cases, selectedPatterns, selectedVerdicts, sarRequired]);
 
+  const shouldReduceMotion = useReducedMotion();
+
   return (
     <div style={{ maxWidth: 960, margin: '0 auto', padding: '32px 24px' }}>
       {/* Page header */}
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 28 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
         <div>
-          <h1 style={{ fontFamily: 'Space Grotesk, sans-serif', fontSize: 28, fontWeight: 800, color: 'var(--color-text)', letterSpacing: '-0.03em', marginBottom: 4 }}>
+          <h1
+            style={{
+              fontFamily: 'Space Grotesk, sans-serif',
+              fontSize: 28,
+              fontWeight: 800,
+              color: 'var(--color-text)',
+              letterSpacing: '-0.03em',
+              margin: 0,
+              lineHeight: 1.15,
+            }}
+          >
             Fraud Investigations
           </h1>
-          <p style={{ fontSize: 13, color: 'var(--color-text-muted)', fontFamily: 'JetBrains Mono, monospace' }}>
+          <p
+            style={{
+              margin: '4px 0 0',
+              fontSize: 10.5,
+              color: 'var(--color-text-muted)',
+              fontFamily: 'JetBrains Mono, monospace',
+              fontWeight: 600,
+              letterSpacing: '0.05em',
+              textTransform: 'uppercase',
+            }}
+          >
             TigerGraph · LangGraph · Gemini 2.0 Flash
           </p>
         </div>
-        <button
+
+        <motion.button
           onClick={() => setShowDrawer(true)}
           className="nm-btn-brand"
-          style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}
+          initial="rest"
+          whileHover={shouldReduceMotion ? undefined : 'hover'}
+          whileTap={shouldReduceMotion ? undefined : 'tap'}
+          variants={{
+            rest: { y: 0 },
+            hover: { y: -2, boxShadow: '0 8px 24px rgba(107, 92, 246, 0.45)' },
+            tap: { y: 0, scale: 0.98 },
+          }}
+          transition={{ duration: 0.18, ease: 'easeOut' }}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8,
+            flexShrink: 0,
+            cursor: 'pointer',
+            padding: '10px 18px',
+            borderRadius: 14,
+            fontWeight: 700,
+            fontSize: 13,
+          }}
         >
-          <span style={{ fontSize: 16 }}>+</span> New Investigation
-        </button>
+          <motion.span
+            variants={{
+              rest: { rotate: 0 },
+              hover: { rotate: 90, scale: 1.15 },
+            }}
+            transition={{ type: 'spring', stiffness: 380, damping: 18 }}
+            style={{ display: 'inline-block', fontSize: 17, lineHeight: 1, fontWeight: 700 }}
+          >
+            +
+          </motion.span>
+          <span>New Investigation</span>
+        </motion.button>
       </div>
 
       {/* Stats */}
       {!loading && cases.length > 0 && <StatsRow cases={cases} />}
 
-      {/* Interactive Filter Bar */}
-      <FilterBar
-        selectedPatterns={selectedPatterns}
-        onTogglePattern={togglePattern}
-        selectedVerdicts={selectedVerdicts}
-        onToggleVerdict={toggleVerdict}
-        sarRequired={sarRequired}
-        onToggleSar={toggleSar}
-        filteredCount={filtered.length}
-        totalCount={cases.length}
-        onClearAll={clearAllFilters}
-      />
+      {/* Interactive Filter Bar (Staggered load) */}
+      <motion.div
+        initial={shouldReduceMotion ? false : { opacity: 0, y: 14 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: shouldReduceMotion ? 0 : 0.35, delay: shouldReduceMotion ? 0 : 0.22 }}
+      >
+        <FilterBar
+          selectedPatterns={selectedPatterns}
+          onTogglePattern={togglePattern}
+          selectedVerdicts={selectedVerdicts}
+          onToggleVerdict={toggleVerdict}
+          sarRequired={sarRequired}
+          onToggleSar={toggleSar}
+          filteredCount={filtered.length}
+          totalCount={cases.length}
+          onClearAll={clearAllFilters}
+        />
+      </motion.div>
 
       {/* Error */}
       {error && (
