@@ -103,7 +103,7 @@ export const AgentPipelineView: React.FC<AgentPipelineViewProps> = ({ isRunning,
                     fontSize: 18,
                     background: 'var(--nm-surface)',
                     boxShadow: isActive
-                      ? `var(--shadow-nm-md), 0 0 0 2px var(--color-brand), 0 0 16px var(--color-brand-glow)`
+                      ? `var(--shadow-nm-md), 0 0 0 2px var(--color-brand)`
                       : isDone
                       ? `var(--shadow-nm-sm), 0 0 0 2px var(--color-risk-low)44`
                       : `var(--shadow-nm-sm)`,

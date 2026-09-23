@@ -31,7 +31,7 @@ export const PatternTag: React.FC<PatternTagProps> = ({ pattern, showFull = fals
       aria-label={`Pattern: ${cfg?.label ?? pattern}`}
       title={cfg?.label}
     >
-      <span style={{ width: 6, height: 6, borderRadius: '50%', background: accent, flexShrink: 0, boxShadow: `0 0 5px ${accent}99` }} aria-hidden="true" />
+      <span style={{ width: 6, height: 6, borderRadius: '50%', background: accent, flexShrink: 0 }} aria-hidden="true" />
       {label}
     </span>
   );

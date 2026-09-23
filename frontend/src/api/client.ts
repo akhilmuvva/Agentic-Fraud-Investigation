@@ -95,7 +95,12 @@ export async function fetchCaseDetail(caseId: string): Promise<CaseDetail> {
  * Used to hydrate the case list with richer data than /cases summaries provide.
  */
 export async function fetchFullCases(): Promise<CaseDetail[]> {
-  return request<CaseDetail[]>('/api/full-cases');
+  try {
+    return await request<CaseDetail[]>('/api/full-cases');
+  } catch {
+    const list = await request<any[]>('/cases');
+    return list as CaseDetail[];
+  }
 }
 
 /**

@@ -261,13 +261,13 @@ h1, h2, h3, h4, h5, h6 {
    RISK ACCENT HELPERS
    ============================================================ */
 .nm-risk-high {
-  box-shadow: var(--shadow-nm-sm), 0 0 0 1px rgba(224, 82, 82, 0.2);
+  box-shadow: var(--shadow-nm-sm);
 }
 .nm-risk-med {
-  box-shadow: var(--shadow-nm-sm), 0 0 0 1px rgba(217, 119, 6, 0.2);
+  box-shadow: var(--shadow-nm-sm);
 }
 .nm-risk-low {
-  box-shadow: var(--shadow-nm-sm), 0 0 0 1px rgba(5, 150, 105, 0.2);
+  box-shadow: var(--shadow-nm-sm);
 }
 
 /* ============================================================
@@ -332,7 +332,7 @@ h1, h2, h3, h4, h5, h6 {
   50% { transform: scale(1.05); }
 }
 @keyframes node-glow-pulse {
-  0%, 100% { opacity: 0.6; }
+  0%, 100% { opacity: 0.85; }
   50% { opacity: 1; }
 }
 @keyframes spin-slow {

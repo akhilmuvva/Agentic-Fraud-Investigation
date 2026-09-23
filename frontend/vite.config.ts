@@ -13,11 +13,30 @@ export default defineConfig({
   server: {
     port: 5173,
     proxy: {
-      // Proxy API calls to the FastAPI backend during development
-      '/investigate': 'http://localhost:8000',
-      '/cases': 'http://localhost:8000',
-      '/health': 'http://localhost:8000',
-      '/api': 'http://localhost:8000',
+      // Direct API endpoints — proxy only when NOT requesting HTML page
+      '/cases': {
+        target: 'http://localhost:8000',
+        changeOrigin: true,
+        bypass: (req) => {
+          // If browser navigation (requesting HTML), serve SPA index.html so React Router handles /cases/:caseId
+          const accept = req.headers.accept || '';
+          if (req.method === 'GET' && accept.includes('text/html')) {
+            return '/index.html';
+          }
+        },
+      },
+      '/investigate': {
+        target: 'http://localhost:8000',
+        changeOrigin: true,
+      },
+      '/health': {
+        target: 'http://localhost:8000',
+        changeOrigin: true,
+      },
+      '/api': {
+        target: 'http://localhost:8000',
+        changeOrigin: true,
+      },
     },
   },
 });

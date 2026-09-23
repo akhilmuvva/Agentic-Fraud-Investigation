@@ -106,7 +106,7 @@ const NewInvestigationDrawer: React.FC<DrawerProps> = ({ onClose, onComplete }) 
     >
       {/* Backdrop */}
       <motion.div
-        style={{ position: 'absolute', inset: 0, background: 'rgba(26, 31, 46, 0.45)', backdropFilter: 'blur(6px)' }}
+        style={{ position: 'absolute', inset: 0, background: 'rgba(26, 31, 46, 0.6)' }}
         onClick={onClose} aria-hidden="true"
       />
       {/* Drawer */}

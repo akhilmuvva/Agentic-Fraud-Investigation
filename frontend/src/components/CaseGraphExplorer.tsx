@@ -136,14 +136,6 @@ const NodeMesh: React.FC<NodeMeshProps> = ({ node, isSelected, onSelect }) => {
 
   return (
     <group position={node.position}>
-      {/* Outer glow sphere */}
-      {(isSelected || node.isFocal) && (
-        <mesh scale={[size * 2.4, size * 2.4, size * 2.4]}>
-          <sphereGeometry args={[1, 16, 16]} />
-          <meshBasicMaterial color={palette.color} transparent opacity={0.05} side={THREE.BackSide} />
-        </mesh>
-      )}
-
       {/* Main sphere */}
       <mesh
         ref={meshRef}
@@ -155,7 +147,7 @@ const NodeMesh: React.FC<NodeMeshProps> = ({ node, isSelected, onSelect }) => {
         <meshStandardMaterial
           color={palette.color}
           emissive={palette.emissive}
-          emissiveIntensity={isSelected ? 0.6 : hovered ? 0.35 : 0.15}
+          emissiveIntensity={isSelected ? 0.2 : hovered ? 0.1 : 0.05}
           roughness={0.35}
           metalness={0.55}
         />

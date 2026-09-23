@@ -60,7 +60,7 @@ export const NbaPanel: React.FC<NbaPanelProps> = ({ caseData }) => {
                     style={{
                       width: 36, height: 36, borderRadius: 10, flexShrink: 0,
                       display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18,
-                      boxShadow: `var(--shadow-nm-sm), 0 0 0 1px ${sev.border}44, 0 0 10px ${sev.glow}`,
+                      boxShadow: `var(--shadow-nm-sm), 0 0 0 1px ${sev.border}44`,
                     }}
                   >
                     {cfg.icon}

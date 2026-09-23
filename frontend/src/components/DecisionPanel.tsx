@@ -80,8 +80,7 @@ export const DecisionPanel: React.FC<DecisionPanelProps> = ({ caseData }) => {
                 className="nm-progress-fill"
                 style={{
                   width: `${c.fraud_probability * 100}%`,
-                  background: `linear-gradient(90deg, ${probColor} 0%, ${probColor}BB 100%)`,
-                  boxShadow: `0 0 8px ${probColor}66`,
+                  background: probColor,
                 }}
                 role="progressbar"
                 aria-valuenow={Math.round(c.fraud_probability * 100)}

@@ -31,14 +31,14 @@ export const SarFlag: React.FC<SarFlagProps> = ({ required, size = 'md', showNeg
         letterSpacing: '0.08em', textTransform: 'uppercase',
         color: 'var(--color-risk-high)',
         background: 'var(--nm-surface)',
-        boxShadow: `var(--shadow-nm-concave), 0 0 0 2px ${`var(--color-risk-high)`}44, 0 0 12px var(--color-risk-high-glow)`,
+        boxShadow: `var(--shadow-nm-concave), 0 0 0 2px var(--color-risk-high)33`,
         borderRadius: 8,
         transform: 'rotate(-1deg)',
       }}
       role="status"
       aria-label="SAR filing required"
     >
-      <span style={{ animation: 'node-glow-pulse 2s ease-in-out infinite' }}>⚑</span>
+      <span>⚑</span>
       SAR Required
     </span>
   );

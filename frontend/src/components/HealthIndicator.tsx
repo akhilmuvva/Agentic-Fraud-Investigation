@@ -22,21 +22,10 @@ export const HealthIndicator: React.FC = () => {
     >
       {/* Dot */}
       <span style={{ position: 'relative', display: 'flex', width: 8, height: 8 }}>
-        {cfg.pulse && (
-          <span
-            style={{
-              position: 'absolute', inset: 0, borderRadius: '50%',
-              background: cfg.color, opacity: 0.6,
-              animation: 'node-glow-pulse 1.5s ease-in-out infinite',
-            }}
-            aria-hidden="true"
-          />
-        )}
         <span
           style={{
             position: 'relative', width: 8, height: 8, borderRadius: '50%',
             background: cfg.color,
-            boxShadow: `0 0 6px ${cfg.color}99`,
           }}
           aria-hidden="true"
         />

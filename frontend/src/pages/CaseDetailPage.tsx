@@ -85,7 +85,7 @@ const PatternsPanel: React.FC<{ caseData: NonNullable<ReturnType<typeof useCaseD
                 <div style={{
                   width: 32, height: 32, borderRadius: '50%', flexShrink: 0,
                   background: 'var(--nm-surface)',
-                  boxShadow: matched ? `var(--shadow-nm-sm), 0 0 0 2px ${accent}66, 0 0 10px ${accent}33` : 'var(--shadow-nm-sm)',
+                  boxShadow: matched ? `var(--shadow-nm-sm), 0 0 0 2px ${accent}44` : 'var(--shadow-nm-sm)',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   fontSize: 14,
                 }}>
@@ -124,7 +124,7 @@ const SarPanel: React.FC<{ caseData: NonNullable<ReturnType<typeof useCaseDetail
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       className="nm-lg"
-      style={{ padding: '24px', boxShadow: `var(--shadow-nm-md), 0 0 0 2px var(--color-risk-high)44, 0 0 20px var(--color-risk-high-glow)` }}
+      style={{ padding: '24px' }}
     >
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: 16, marginBottom: 20 }}>
         <div className="nm-sm" style={{ width: 44, height: 44, borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24, flexShrink: 0, boxShadow: `var(--shadow-nm-sm), 0 0 0 1px var(--color-risk-high)44` }}>
@@ -329,7 +329,7 @@ export const CaseDetailPage: React.FC = () => {
               <div className="nm-divider" style={{ marginBottom: 14 }} />
               {c.evidence.map((ev, i) => (
                 <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '8px 0', borderBottom: '1px solid var(--nm-shadow-dark)', opacity: 0.9 }}>
-                  <div style={{ width: 8, height: 8, borderRadius: '50%', flexShrink: 0, marginTop: 4, background: ev.source === 'graph' ? 'var(--color-brand)' : 'var(--color-text-muted)', boxShadow: `0 0 4px ${ev.source === 'graph' ? 'var(--color-brand)' : 'transparent'}` }} />
+                  <div style={{ width: 8, height: 8, borderRadius: '50%', flexShrink: 0, marginTop: 4, background: ev.source === 'graph' ? 'var(--color-brand)' : 'var(--color-text-muted)' }} />
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 10, color: 'var(--color-text-muted)', marginRight: 8 }}>[{ev.ref}]</span>
                     <span style={{ fontSize: 12, color: 'var(--color-text-secondary)' }}>{ev.claim.slice(0, 130)}</span>
