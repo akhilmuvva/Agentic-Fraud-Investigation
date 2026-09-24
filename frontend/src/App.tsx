@@ -2,7 +2,7 @@
  * src/App.tsx — Neumorphic shell
  */
 import React, { useState, useEffect } from 'react';
-import { BrowserRouter, Routes, Route, Link, useLocation } from 'react-router-dom';
+import { HashRouter, Routes, Route, Link, useLocation } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { CaseListPage } from './pages/CaseListPage';
 import { CaseDetailPage } from './pages/CaseDetailPage';
@@ -104,7 +104,7 @@ const App: React.FC = () => {
   }, [dark]);
 
   return (
-    <BrowserRouter>
+    <HashRouter>
       <div style={{ minHeight: '100vh', background: 'var(--nm-bg)' }}>
         <Header dark={dark} onToggleDark={() => setDark(d => !d)} />
         <main style={{ paddingBottom: 60 }}>
@@ -118,7 +118,7 @@ const App: React.FC = () => {
           </div>
         </footer>
       </div>
-    </BrowserRouter>
+    </HashRouter>
   );
 };
 

@@ -16,6 +16,7 @@ import type {
   HealthResponse,
   InvestigateRequest,
   InvestigateResponse,
+  Verdict,
 } from './types';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -65,13 +66,20 @@ async function request<T>(
   return response.json() as Promise<T>;
 }
 
+import staticCasesData from '../data/staticCases.json';
+const staticCases = staticCasesData as CaseDetail[];
+
 // ---------------------------------------------------------------------------
-// Public API methods
+// Public API methods (with static fallback for GitHub Pages demo mode)
 // ---------------------------------------------------------------------------
 
 /** GET /health — liveness probe */
 export async function fetchHealth(): Promise<HealthResponse> {
-  return request<HealthResponse>('/health');
+  try {
+    return await request<HealthResponse>('/health');
+  } catch {
+    return { status: 'ok', timestamp: new Date().toISOString() };
+  }
 }
 
 /**
@@ -79,7 +87,20 @@ export async function fetchHealth(): Promise<HealthResponse> {
  * Returns an empty array if the store is empty.
  */
 export async function fetchCases(): Promise<CaseSummary[]> {
-  return request<CaseSummary[]>('/cases');
+  try {
+    return await request<CaseSummary[]>('/cases');
+  } catch {
+    return staticCases.map(c => ({
+      case_id: c.case_id,
+      trigger_type: c.trigger_type ?? 'risk_score',
+      status: c.case.status ?? 'closed_fraud',
+      outcome: c.case.verdict ?? 'fraud',
+      pattern_matched: c.case.pattern ?? null,
+      confidence: c.case.fraud_probability ?? null,
+      sar_required: c.sar?.file ?? null,
+      risk_score: c.case.fraud_probability ?? null,
+    }));
+  }
 }
 
 /**
@@ -87,7 +108,13 @@ export async function fetchCases(): Promise<CaseSummary[]> {
  * Throws ApiClientError with status 404 if not found.
  */
 export async function fetchCaseDetail(caseId: string): Promise<CaseDetail> {
-  return request<CaseDetail>(`/cases/${encodeURIComponent(caseId)}`);
+  try {
+    return await request<CaseDetail>(`/cases/${encodeURIComponent(caseId)}`);
+  } catch {
+    const found = staticCases.find(c => c.case_id.toLowerCase() === caseId.toLowerCase());
+    if (found) return found;
+    throw new ApiClientError(404, `Case '${caseId}' not found`);
+  }
 }
 
 /**
@@ -98,8 +125,12 @@ export async function fetchFullCases(): Promise<CaseDetail[]> {
   try {
     return await request<CaseDetail[]>('/api/full-cases');
   } catch {
-    const list = await request<any[]>('/cases');
-    return list as CaseDetail[];
+    try {
+      const list = await request<any[]>('/cases');
+      return list as CaseDetail[];
+    } catch {
+      return staticCases;
+    }
   }
 }
 
@@ -110,10 +141,27 @@ export async function fetchFullCases(): Promise<CaseDetail[]> {
 export async function postInvestigate(
   req: InvestigateRequest,
 ): Promise<InvestigateResponse> {
-  return request<InvestigateResponse>('/investigate', {
-    method: 'POST',
-    body: JSON.stringify(req),
-  });
+  try {
+    return await request<InvestigateResponse>('/investigate', {
+      method: 'POST',
+      body: JSON.stringify(req),
+    });
+  } catch {
+    const caseId = req.case_id || 'HHG-NEW';
+    const existing = staticCases.find(c => c.case_id.toLowerCase() === caseId.toLowerCase());
+    const verdict: Verdict = existing
+      ? existing.case.verdict
+      : ((req.risk_score || 0) >= 0.7 ? 'fraud' : (req.risk_score || 0) >= 0.4 ? 'uncertain' : 'legitimate');
+
+    return {
+      case_id: caseId,
+      status: 'completed',
+      outcome: verdict,
+      confidence: existing ? existing.case.fraud_probability : (req.risk_score || 0.75),
+      recommended_actions: existing?.next_best_actions?.final?.map(a => a.action) || ['VERIFY_WITH_CUSTOMER'],
+      sar_required: existing ? existing.sar?.file : (req.risk_score || 0) > 0.7,
+    };
+  }
 }
 
 export { ApiClientError };
