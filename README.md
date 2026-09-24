@@ -209,12 +209,20 @@ D:\hakern\
 ├── output\                 # Auto-created; one sub-dir per case
 ├── .env.example
 ├── requirements.txt
+├── CONTRIBUTING.md
 └── README.md
 ```
 
 ---
 
+## 👥 Contributors & Team PolyLance
 
+- **[@sunny200551](https://github.com/sunny200551)** — Frontend Lead & UI/UX Architect (Neumorphic Design System, 3D Graph Visualizer, Dashboard & Live Agent Pipeline)
+- **[@akhilmuvva](https://github.com/akhilmuvva)** — Project Lead & Backend Architect (TigerGraph Savanna, LangGraph Agent, Gemini 2.0 Flash)
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for full contribution guidelines and development workflow.
+
+---
 
 > **Hackathon:** TigerGraph 2025 Agentic AI Challenge  
 > **Team:** PolyLance  
