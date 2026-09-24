@@ -11,37 +11,37 @@ IEEE-CIS Dataset (CSV)
         │
         ▼
  [ load_data.py ]  ────────────────────────────────────────────────┐
-        │                                                           │
-        ▼                                                           │
- TigerGraph Savanna                                                 │
+        │                                                          │
+        ▼                                                          │
+ TigerGraph Savanna                                                │
   ┌─────────────────────────────────────────────────────────────┐  │
   │  Vertices: Transaction, Card, Customer, Device, IP, MerchCat│  │
   │  Edges:    used_card, has_device, located_at, belongs_to …  │  │
   │  GSQL Queries: pattern_match, ring_detection, velocity …    │  │
   └──────────────┬──────────────────────────────────────────────┘  │
-                 │  pyTigerGraph                                     │
-                 ▼                                                   │
-        [ LangGraph Agent ]                                         │
-         ┌──────────────────────────────────────────────────────┐   │
-         │  Node 1 — ingest_case        (load & validate input) │   │
-         │  Node 2 — retrieve_context   (graph neighbourhood)   │   │
-         │  Node 3 — match_patterns     (5 GSQL pattern queries) │  │
-         │  Node 4 — retrieve_similar   (vector embedding RAG)  │   │
-         │  Node 5 — decision           (Gemini LLM reasoning)  │   │
-         │  Node 6 — next_best_action   (NBA before/after)      │   │
-         │  Node 7 — write_to_graph     (persist verdict)       │   │
-         │  Node 8 — format_output      (final state)           │   │
-         └──────────────┬───────────────────────────────────────┘   │
-                        │                                            │
-                        ▼                                            │
-              [ FastAPI Backend ]                                     │
-               POST /investigate                                     │
-               GET  /cases                                           │
-               GET  /cases/{case_id}                                 │
-               GET  /health                                          │
-                        │                                            │
-                        ▼                                            │
-              [ Streamlit Dashboard ]  ◄──────────────────────────── ┘
+                 │  pyTigerGraph                                   │
+                 ▼                                                 │
+        [ LangGraph Agent ]                                        │
+         ┌──────────────────────────────────────────────────────┐  │
+         │  Node 1 — ingest_case        (load & validate input) │  │
+         │  Node 2 — retrieve_context   (graph neighbourhood)   │  │
+         │  Node 3 — match_patterns     (5 GSQL pattern queries)│  │
+         │  Node 4 — retrieve_similar   (vector embedding RAG)  │  │
+         │  Node 5 — decision           (Gemini LLM reasoning)  │  │
+         │  Node 6 — next_best_action   (NBA before/after)      │  │
+         │  Node 7 — write_to_graph     (persist verdict)       │  │
+         │  Node 8 — format_output      (final state)           │  │
+         └──────────────┬───────────────────────────────────────┘  │
+                        │                                          │
+                        ▼                                          │
+              [ FastAPI Backend ]                                  │
+               POST /investigate                                   │
+               GET  /cases                                         │
+               GET  /cases/{case_id}                               │
+               GET  /health                                        │
+                        │                                          │
+                        ▼                                          │
+              [ Streamlit Dashboard ]  ◄────────────────────────── ┘
                Case List (colour-coded)
                Case Detail (timeline, patterns, NBA)
 ```
@@ -209,13 +209,21 @@ D:\hakern\
 ├── output\                 # Auto-created; one sub-dir per case
 ├── .env.example
 ├── requirements.txt
+├── CONTRIBUTING.md
 └── README.md
 ```
 
 ---
 
+## 👥 Contributors & Team PolyLance
 
+- **[@sunny200551](https://github.com/sunny200551)** — Frontend Lead & UI/UX Architect (Neumorphic Design System, 3D Graph Visualizer, Dashboard & Live Agent Pipeline)
+- **[@akhilmuvva](https://github.com/akhilmuvva)** — Project Lead & Backend Architect (TigerGraph Savanna, LangGraph Agent, Gemini 2.0 Flash)
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for full contribution guidelines and development workflow.
+
+---
 
 > **Hackathon:** TigerGraph 2025 Agentic AI Challenge  
-> **Team:** [Your Team Name]  
+> **Team:** PolyLance  
 > **Submitted:** September 2026
