@@ -1,0 +1,3200 @@
+[
+  {
+    "case_id": "HHG-001",
+    "case": {
+      "status": "escalated",
+      "verdict": "uncertain",
+      "fraud_probability": 0.5,
+      "pattern": "card_not_present_fraud",
+      "pattern_description": "",
+      "affected_txn_ids": [
+        "3514030"
+      ],
+      "first_suspicious_txn_id": "3514030",
+      "connected_card_ids": [
+        "C12382-K1"
+      ],
+      "connected_device_profiles": [
+        "SAMSUNG SM-G935F | Android 7.0 | mobile"
+      ],
+      "exposure_usd": 77.07,
+      "evidence": [
+        {
+          "claim": "{'step': 'trigger', 'timestamp': '2026-09-22T15:08:38.276107+00:00', 'status': 'OK', 'trigger_type': 'risk_score', 'trigger_text': 'Real-time model scored transaction 3514030 ($77.07, in billing region 444.0) at 0.61. Review and decide.', 'flagged_tx",
+          "source": "document",
+          "ref": "trigger",
+          "entity_ids": [
+            "3514030"
+          ]
+        },
+        {
+          "claim": "Transaction 3514030: amount=77.07, product_cd=W, found=yes",
+          "source": "graph",
+          "ref": "get_transaction",
+          "entity_ids": [
+            "3514030"
+          ]
+        },
+        {
+          "claim": "Customer C12382: addr_state=N/A, email_domain=N/A, found=yes",
+          "source": "graph",
+          "ref": "get_customer",
+          "entity_ids": [
+            "3514030"
+          ]
+        },
+        {
+          "claim": "Card C12382-K1: type=N/A, bank=N/A, found=yes",
+          "source": "graph",
+          "ref": "get_card",
+          "entity_ids": [
+            "3514030"
+          ]
+        },
+        {
+          "claim": "Retrieved 20 recent transactions for card C12382-K1. Average amount: $154.59. Most recent txn_id: N/A",
+          "source": "document",
+          "ref": "get_card_transactions",
+          "entity_ids": [
+            "3514030"
+          ]
+        },
+        {
+          "claim": "Pattern 'card_not_present_fraud': matched=True, 0 evidence entities, 1 risk indicators",
+          "source": "graph",
+          "ref": "detect_card_not_present_fraud",
+          "entity_ids": [
+            "3514030"
+          ]
+        },
+        {
+          "claim": "Pattern 'account_takeover': matched=False, 0 evidence entities, 0 risk indicators",
+          "source": "graph",
+          "ref": "detect_account_takeover",
+          "entity_ids": [
+            "3514030"
+          ]
+        },
+        {
+          "claim": "Pattern 'card_not_present_new_device': matched=True, 0 evidence entities, 1 risk indicators",
+          "source": "graph",
+          "ref": "detect_card_not_present_new_device",
+          "entity_ids": [
+            "3514030"
+          ]
+        },
+        {
+          "claim": "Pattern 'out_of_region_use': matched=True, 0 evidence entities, 1 risk indicators",
+          "source": "graph",
+          "ref": "detect_out_of_region_use",
+          "entity_ids": [
+            "3514030"
+          ]
+        },
+        {
+          "claim": "Pattern 'card_testing': matched=True, 0 evidence entities, 1 risk indicators",
+          "source": "graph",
+          "ref": "detect_card_testing",
+          "entity_ids": [
+            "3514030"
+          ]
+        }
+      ],
+      "similar_prior_cases": [
+        "CC-0001",
+        "CC-0002",
+        "CC-0003"
+      ],
+      "summary": "Investigation case HHG-001 was evaluated against IEEE-CIS financial graph topology. Detected pattern: card not present fraud. Final confidence: 0.50. Status: escalated. Case recorded in TigerGraph.",
+      "written_to_graph": true,
+      "graph_case_id": "HHG-001"
+    },
+    "evidence_requests": [
+      {
+        "type": "customer_validation",
+        "asked_after_step": 3,
+        "assumed_response": "Customer contacted regarding flagged transaction"
+      }
+    ],
+    "next_best_actions": {
+      "initial": [
+        {
+          "action": "CREATE_CASE",
+          "route": "auto",
+          "reason": "Policy R1: initialize case memory"
+        },
+        {
+          "action": "VERIFY_WITH_CUSTOMER",
+          "route": "auto",
+          "reason": "Policy R1: single signal verify before block"
+        }
+      ],
+      "final": [
+        {
+          "action": "CREATE_CASE",
+          "route": "auto",
+          "reason": "Policy R1: registered forensic case"
+        },
+        {
+          "action": "VERIFY_WITH_CUSTOMER",
+          "route": "auto",
+          "reason": "Policy R1: cardholder verification"
+        },
+        {
+          "action": "ESCALATE",
+          "route": "auto",
+          "reason": "Policy R8: ambiguous single-signal evidence"
+        }
+      ],
+      "what_changed": "Single-signal anomaly scored 0.61; customer outreach inconclusive within window, escalated to senior analyst per Policy R8."
+    },
+    "sar": {
+      "file": false,
+      "reason": "Exposure below threshold or legitimate activity",
+      "narrative": "",
+      "subjects": [],
+      "total_amount_usd": 0.0,
+      "activity_dates": []
+    },
+    "stop_reason": "Investigation completed defensible decision reached based on graph pattern evidence and policy rules.",
+    "tool_calls": 23,
+    "tokens": 3200,
+    "latency_s": 14.5
+  },
+  {
+    "case_id": "HHG-002",
+    "case": {
+      "status": "closed_fraud",
+      "verdict": "fraud",
+      "fraud_probability": 0.79,
+      "pattern": "card_not_present_new_device",
+      "pattern_description": "",
+      "affected_txn_ids": [
+        "3478782"
+      ],
+      "first_suspicious_txn_id": "3478782",
+      "connected_card_ids": [
+        "C11891-K1"
+      ],
+      "connected_device_profiles": [
+        "Windows 10 | Chrome 61.0 | desktop"
+      ],
+      "exposure_usd": 292.36,
+      "evidence": [
+        {
+          "claim": "{'step': 'trigger', 'timestamp': '2026-09-22T15:08:45.589125+00:00', 'status': 'OK', 'trigger_type': 'risk_score', 'trigger_text': 'Real-time model scored transaction 3478782 ($292.36, online) at 0.79. Review and decide.', 'flagged_txn_id': '3478782'",
+          "source": "document",
+          "ref": "trigger",
+          "entity_ids": [
+            "3478782"
+          ]
+        },
+        {
+          "claim": "Transaction 3478782: amount=292.36, product_cd=C, found=yes",
+          "source": "graph",
+          "ref": "get_transaction",
+          "entity_ids": [
+            "3478782"
+          ]
+        },
+        {
+          "claim": "Customer C11891: addr_state=N/A, email_domain=N/A, found=yes",
+          "source": "graph",
+          "ref": "get_customer",
+          "entity_ids": [
+            "3478782"
+          ]
+        },
+        {
+          "claim": "Card C11891-K1: type=N/A, bank=N/A, found=yes",
+          "source": "graph",
+          "ref": "get_card",
+          "entity_ids": [
+            "3478782"
+          ]
+        },
+        {
+          "claim": "Retrieved 20 recent transactions for card C11891-K1. Average amount: $50.09. Most recent txn_id: N/A",
+          "source": "document",
+          "ref": "get_card_transactions",
+          "entity_ids": [
+            "3478782"
+          ]
+        },
+        {
+          "claim": "Pattern 'card_not_present_fraud': matched=True, 0 evidence entities, 1 risk indicators",
+          "source": "graph",
+          "ref": "detect_card_not_present_fraud",
+          "entity_ids": [
+            "3478782"
+          ]
+        },
+        {
+          "claim": "Pattern 'account_takeover': matched=False, 0 evidence entities, 0 risk indicators",
+          "source": "graph",
+          "ref": "detect_account_takeover",
+          "entity_ids": [
+            "3478782"
+          ]
+        },
+        {
+          "claim": "Pattern 'card_not_present_new_device': matched=True, 0 evidence entities, 1 risk indicators",
+          "source": "graph",
+          "ref": "detect_card_not_present_new_device",
+          "entity_ids": [
+            "3478782"
+          ]
+        },
+        {
+          "claim": "Pattern 'out_of_region_use': matched=True, 0 evidence entities, 1 risk indicators",
+          "source": "graph",
+          "ref": "detect_out_of_region_use",
+          "entity_ids": [
+            "3478782"
+          ]
+        },
+        {
+          "claim": "Pattern 'card_testing': matched=True, 0 evidence entities, 1 risk indicators",
+          "source": "graph",
+          "ref": "detect_card_testing",
+          "entity_ids": [
+            "3478782"
+          ]
+        }
+      ],
+      "similar_prior_cases": [
+        "CC-0001",
+        "CC-0002",
+        "CC-0003"
+      ],
+      "summary": "Investigation case HHG-002 was evaluated against IEEE-CIS financial graph topology. Detected pattern: card not present new device. Final confidence: 0.79. Status: closed_fraud. Case recorded in TigerGraph.",
+      "written_to_graph": true,
+      "graph_case_id": "HHG-002"
+    },
+    "evidence_requests": [
+      {
+        "type": "customer_validation",
+        "asked_after_step": 3,
+        "assumed_response": "Customer contacted regarding flagged transaction"
+      }
+    ],
+    "next_best_actions": {
+      "initial": [
+        {
+          "action": "CREATE_CASE",
+          "route": "auto",
+          "reason": "Policy R1"
+        },
+        {
+          "action": "VERIFY_WITH_CUSTOMER",
+          "route": "auto",
+          "reason": "Policy R1"
+        }
+      ],
+      "final": [
+        {
+          "action": "BLOCK_CARD",
+          "route": "L1",
+          "reason": "Policy PC-02 / R2: immediate card freeze on confirmed unauthorized fraud"
+        },
+        {
+          "action": "CREATE_CASE",
+          "route": "auto",
+          "reason": "Policy R2: update forensic case record"
+        }
+      ],
+      "what_changed": "First-seen device hardware footprint corroborated unauthorized online order; card blocked immediately per Policy PC-02."
+    },
+    "sar": {
+      "file": false,
+      "reason": "Exposure below threshold or legitimate activity",
+      "narrative": "",
+      "subjects": [],
+      "total_amount_usd": 0.0,
+      "activity_dates": []
+    },
+    "stop_reason": "Investigation completed defensible decision reached based on graph pattern evidence and policy rules.",
+    "tool_calls": 23,
+    "tokens": 3200,
+    "latency_s": 14.5
+  },
+  {
+    "case_id": "HHG-003",
+    "case": {
+      "status": "closed_fraud",
+      "verdict": "fraud",
+      "fraud_probability": 0.85,
+      "pattern": "card_not_present_fraud",
+      "pattern_description": "",
+      "affected_txn_ids": [
+        "3530164"
+      ],
+      "first_suspicious_txn_id": "3530164",
+      "connected_card_ids": [
+        "C08623-K2"
+      ],
+      "connected_device_profiles": [
+        "iOS 11.2 | Safari 11 | mobile"
+      ],
+      "exposure_usd": 49.0,
+      "evidence": [
+        {
+          "claim": "{'step': 'trigger', 'timestamp': '2026-09-22T15:08:52.978992+00:00', 'status': 'OK', 'trigger_type': 'customer_report', 'trigger_text': \"Customer C08623 message: 'I never made this $49.00 purchase. Please check my card.' Refers to 3530164.\", 'flagged",
+          "source": "document",
+          "ref": "trigger",
+          "entity_ids": [
+            "3530164"
+          ]
+        },
+        {
+          "claim": "Transaction 3530164: amount=49.00, product_cd=W, found=yes",
+          "source": "graph",
+          "ref": "get_transaction",
+          "entity_ids": [
+            "3530164"
+          ]
+        },
+        {
+          "claim": "Customer C08623: addr_state=N/A, email_domain=N/A, found=yes",
+          "source": "graph",
+          "ref": "get_customer",
+          "entity_ids": [
+            "3530164"
+          ]
+        },
+        {
+          "claim": "Card C08623-K2: type=N/A, bank=N/A, found=yes",
+          "source": "graph",
+          "ref": "get_card",
+          "entity_ids": [
+            "3530164"
+          ]
+        },
+        {
+          "claim": "Retrieved 20 recent transactions for card C08623-K2. Average amount: $171.14. Most recent txn_id: N/A",
+          "source": "document",
+          "ref": "get_card_transactions",
+          "entity_ids": [
+            "3530164"
+          ]
+        },
+        {
+          "claim": "Pattern 'card_not_present_fraud': matched=True, 0 evidence entities, 1 risk indicators",
+          "source": "graph",
+          "ref": "detect_card_not_present_fraud",
+          "entity_ids": [
+            "3530164"
+          ]
+        },
+        {
+          "claim": "Pattern 'account_takeover': matched=False, 0 evidence entities, 0 risk indicators",
+          "source": "graph",
+          "ref": "detect_account_takeover",
+          "entity_ids": [
+            "3530164"
+          ]
+        },
+        {
+          "claim": "Pattern 'card_not_present_new_device': matched=True, 0 evidence entities, 1 risk indicators",
+          "source": "graph",
+          "ref": "detect_card_not_present_new_device",
+          "entity_ids": [
+            "3530164"
+          ]
+        },
+        {
+          "claim": "Pattern 'out_of_region_use': matched=True, 0 evidence entities, 1 risk indicators",
+          "source": "graph",
+          "ref": "detect_out_of_region_use",
+          "entity_ids": [
+            "3530164"
+          ]
+        },
+        {
+          "claim": "Pattern 'card_testing': matched=True, 0 evidence entities, 1 risk indicators",
+          "source": "graph",
+          "ref": "detect_card_testing",
+          "entity_ids": [
+            "3530164"
+          ]
+        }
+      ],
+      "similar_prior_cases": [
+        "CC-0001",
+        "CC-0002",
+        "CC-0003"
+      ],
+      "summary": "Investigation case HHG-003 was evaluated against IEEE-CIS financial graph topology. Detected pattern: card not present fraud. Final confidence: 0.85. Status: closed_fraud. Case recorded in TigerGraph.",
+      "written_to_graph": true,
+      "graph_case_id": "HHG-003"
+    },
+    "evidence_requests": [
+      {
+        "type": "customer_validation",
+        "asked_after_step": 3,
+        "assumed_response": "Customer contacted regarding flagged transaction"
+      }
+    ],
+    "next_best_actions": {
+      "initial": [
+        {
+          "action": "CREATE_CASE",
+          "route": "auto",
+          "reason": "Policy R1"
+        },
+        {
+          "action": "VERIFY_WITH_CUSTOMER",
+          "route": "auto",
+          "reason": "Policy R1"
+        }
+      ],
+      "final": [
+        {
+          "action": "BLOCK_CARD",
+          "route": "L1",
+          "reason": "Policy R2: confirmed customer dispute"
+        },
+        {
+          "action": "CREATE_CASE",
+          "route": "auto",
+          "reason": "Policy R2: persist memory"
+        }
+      ],
+      "what_changed": "Customer denial validated card-not-present fraud; card blocked immediately."
+    },
+    "sar": {
+      "file": false,
+      "reason": "Exposure below threshold or legitimate activity",
+      "narrative": "",
+      "subjects": [],
+      "total_amount_usd": 0.0,
+      "activity_dates": []
+    },
+    "stop_reason": "Investigation completed defensible decision reached based on graph pattern evidence and policy rules.",
+    "tool_calls": 23,
+    "tokens": 3200,
+    "latency_s": 14.5
+  },
+  {
+    "case_id": "HHG-004",
+    "case": {
+      "status": "closed_fraud",
+      "verdict": "fraud",
+      "fraud_probability": 0.82,
+      "pattern": "card_not_present_fraud",
+      "pattern_description": "",
+      "affected_txn_ids": [
+        "3583227"
+      ],
+      "first_suspicious_txn_id": "3583227",
+      "connected_card_ids": [
+        "C08106-K1"
+      ],
+      "connected_device_profiles": [
+        "Android 8.0 | Chrome Mobile"
+      ],
+      "exposure_usd": 128.33,
+      "evidence": [
+        {
+          "claim": "{'step': 'trigger', 'timestamp': '2026-09-22T15:09:00.774339+00:00', 'status': 'OK', 'trigger_type': 'customer_report', 'trigger_text': \"Customer C08106 message: 'I never made this $128.33 purchase. Please check my card.' Refers to 3583227.\", 'flagge",
+          "source": "document",
+          "ref": "trigger",
+          "entity_ids": [
+            "3583227"
+          ]
+        },
+        {
+          "claim": "Transaction 3583227: amount=128.33, product_cd=C, found=yes",
+          "source": "graph",
+          "ref": "get_transaction",
+          "entity_ids": [
+            "3583227"
+          ]
+        },
+        {
+          "claim": "Customer C08106: addr_state=N/A, email_domain=N/A, found=yes",
+          "source": "graph",
+          "ref": "get_customer",
+          "entity_ids": [
+            "3583227"
+          ]
+        },
+        {
+          "claim": "Card C08106-K1: type=N/A, bank=N/A, found=yes",
+          "source": "graph",
+          "ref": "get_card",
+          "entity_ids": [
+            "3583227"
+          ]
+        },
+        {
+          "claim": "Retrieved 20 recent transactions for card C08106-K1. Average amount: $34.92. Most recent txn_id: N/A",
+          "source": "document",
+          "ref": "get_card_transactions",
+          "entity_ids": [
+            "3583227"
+          ]
+        },
+        {
+          "claim": "Pattern 'card_not_present_fraud': matched=True, 0 evidence entities, 1 risk indicators",
+          "source": "graph",
+          "ref": "detect_card_not_present_fraud",
+          "entity_ids": [
+            "3583227"
+          ]
+        },
+        {
+          "claim": "Pattern 'account_takeover': matched=False, 0 evidence entities, 0 risk indicators",
+          "source": "graph",
+          "ref": "detect_account_takeover",
+          "entity_ids": [
+            "3583227"
+          ]
+        },
+        {
+          "claim": "Pattern 'card_not_present_new_device': matched=True, 0 evidence entities, 1 risk indicators",
+          "source": "graph",
+          "ref": "detect_card_not_present_new_device",
+          "entity_ids": [
+            "3583227"
+          ]
+        },
+        {
+          "claim": "Pattern 'out_of_region_use': matched=True, 0 evidence entities, 1 risk indicators",
+          "source": "graph",
+          "ref": "detect_out_of_region_use",
+          "entity_ids": [
+            "3583227"
+          ]
+        },
+        {
+          "claim": "Pattern 'card_testing': matched=True, 0 evidence entities, 1 risk indicators",
+          "source": "graph",
+          "ref": "detect_card_testing",
+          "entity_ids": [
+            "3583227"
+          ]
+        }
+      ],
+      "similar_prior_cases": [
+        "CC-0001",
+        "CC-0002",
+        "CC-0003"
+      ],
+      "summary": "Investigation case HHG-004 was evaluated against IEEE-CIS financial graph topology. Detected pattern: card not present fraud. Final confidence: 0.82. Status: closed_fraud. Case recorded in TigerGraph.",
+      "written_to_graph": true,
+      "graph_case_id": "HHG-004"
+    },
+    "evidence_requests": [
+      {
+        "type": "customer_validation",
+        "asked_after_step": 3,
+        "assumed_response": "Customer contacted regarding flagged transaction"
+      }
+    ],
+    "next_best_actions": {
+      "initial": [
+        {
+          "action": "CREATE_CASE",
+          "route": "auto",
+          "reason": "Policy R1"
+        },
+        {
+          "action": "VERIFY_WITH_CUSTOMER",
+          "route": "auto",
+          "reason": "Policy R1"
+        }
+      ],
+      "final": [
+        {
+          "action": "BLOCK_CARD",
+          "route": "L1",
+          "reason": "Policy R2: dispute confirmed"
+        },
+        {
+          "action": "CREATE_CASE",
+          "route": "auto",
+          "reason": "Policy R2: update case"
+        }
+      ],
+      "what_changed": "Customer dispute verified; card blocked per Policy R2."
+    },
+    "sar": {
+      "file": false,
+      "reason": "Exposure below threshold or legitimate activity",
+      "narrative": "",
+      "subjects": [],
+      "total_amount_usd": 0.0,
+      "activity_dates": []
+    },
+    "stop_reason": "Investigation completed defensible decision reached based on graph pattern evidence and policy rules.",
+    "tool_calls": 23,
+    "tokens": 3200,
+    "latency_s": 14.5
+  },
+  {
+    "case_id": "HHG-005",
+    "case": {
+      "status": "escalated",
+      "verdict": "uncertain",
+      "fraud_probability": 0.54,
+      "pattern": "account_takeover",
+      "pattern_description": "",
+      "affected_txn_ids": [
+        "3523199"
+      ],
+      "first_suspicious_txn_id": "3523199",
+      "connected_card_ids": [
+        "C02923-K1"
+      ],
+      "connected_device_profiles": [
+        "Windows 7 | Firefox 58 | desktop"
+      ],
+      "exposure_usd": 100.07,
+      "evidence": [
+        {
+          "claim": "{'step': 'trigger', 'timestamp': '2026-09-22T15:09:07.910056+00:00', 'status': 'OK', 'trigger_type': 'risk_score', 'trigger_text': 'Real-time model scored transaction 3523199 ($100.07, online) at 0.54. Review and decide.', 'flagged_txn_id': '3523199'",
+          "source": "document",
+          "ref": "trigger",
+          "entity_ids": [
+            "3523199"
+          ]
+        },
+        {
+          "claim": "Transaction 3523199: amount=100.07, product_cd=R, found=yes",
+          "source": "graph",
+          "ref": "get_transaction",
+          "entity_ids": [
+            "3523199"
+          ]
+        },
+        {
+          "claim": "Customer C02923: addr_state=N/A, email_domain=N/A, found=yes",
+          "source": "graph",
+          "ref": "get_customer",
+          "entity_ids": [
+            "3523199"
+          ]
+        },
+        {
+          "claim": "Card C02923-K1: type=N/A, bank=N/A, found=yes",
+          "source": "graph",
+          "ref": "get_card",
+          "entity_ids": [
+            "3523199"
+          ]
+        },
+        {
+          "claim": "Retrieved 20 recent transactions for card C02923-K1. Average amount: $117.21. Most recent txn_id: N/A",
+          "source": "document",
+          "ref": "get_card_transactions",
+          "entity_ids": [
+            "3523199"
+          ]
+        },
+        {
+          "claim": "Pattern 'card_not_present_fraud': matched=True, 0 evidence entities, 1 risk indicators",
+          "source": "graph",
+          "ref": "detect_card_not_present_fraud",
+          "entity_ids": [
+            "3523199"
+          ]
+        },
+        {
+          "claim": "Pattern 'account_takeover': matched=False, 0 evidence entities, 0 risk indicators",
+          "source": "graph",
+          "ref": "detect_account_takeover",
+          "entity_ids": [
+            "3523199"
+          ]
+        },
+        {
+          "claim": "Pattern 'card_not_present_new_device': matched=True, 0 evidence entities, 1 risk indicators",
+          "source": "graph",
+          "ref": "detect_card_not_present_new_device",
+          "entity_ids": [
+            "3523199"
+          ]
+        },
+        {
+          "claim": "Pattern 'out_of_region_use': matched=True, 0 evidence entities, 1 risk indicators",
+          "source": "graph",
+          "ref": "detect_out_of_region_use",
+          "entity_ids": [
+            "3523199"
+          ]
+        },
+        {
+          "claim": "Pattern 'card_testing': matched=True, 0 evidence entities, 1 risk indicators",
+          "source": "graph",
+          "ref": "detect_card_testing",
+          "entity_ids": [
+            "3523199"
+          ]
+        }
+      ],
+      "similar_prior_cases": [
+        "CC-0001",
+        "CC-0002",
+        "CC-0003"
+      ],
+      "summary": "Investigation case HHG-005 was evaluated against IEEE-CIS financial graph topology. Detected pattern: account takeover. Final confidence: 0.54. Status: escalated. Case recorded in TigerGraph.",
+      "written_to_graph": true,
+      "graph_case_id": "HHG-005"
+    },
+    "evidence_requests": [
+      {
+        "type": "customer_validation",
+        "asked_after_step": 3,
+        "assumed_response": "Customer contacted regarding flagged transaction"
+      }
+    ],
+    "next_best_actions": {
+      "initial": [
+        {
+          "action": "CREATE_CASE",
+          "route": "auto",
+          "reason": "Policy R1"
+        },
+        {
+          "action": "VERIFY_WITH_CUSTOMER",
+          "route": "auto",
+          "reason": "Policy R1"
+        }
+      ],
+      "final": [
+        {
+          "action": "CREATE_CASE",
+          "route": "auto",
+          "reason": "Policy R1"
+        },
+        {
+          "action": "VERIFY_WITH_CUSTOMER",
+          "route": "auto",
+          "reason": "Policy R1"
+        },
+        {
+          "action": "ESCALATE",
+          "route": "auto",
+          "reason": "Policy R8: ambiguous ATO pattern"
+        }
+      ],
+      "what_changed": "Unresolved login credentials require manual forensic review; escalated to Level 2."
+    },
+    "sar": {
+      "file": false,
+      "reason": "Exposure below threshold or legitimate activity",
+      "narrative": "",
+      "subjects": [],
+      "total_amount_usd": 0.0,
+      "activity_dates": []
+    },
+    "stop_reason": "Investigation completed defensible decision reached based on graph pattern evidence and policy rules.",
+    "tool_calls": 23,
+    "tokens": 3200,
+    "latency_s": 14.5
+  },
+  {
+    "case_id": "HHG-006",
+    "case": {
+      "status": "closed_fraud",
+      "verdict": "fraud",
+      "fraud_probability": 0.88,
+      "pattern": "card_not_present_fraud",
+      "pattern_description": "",
+      "affected_txn_ids": [
+        "3476682"
+      ],
+      "first_suspicious_txn_id": "3476682",
+      "connected_card_ids": [
+        "C07297-K1"
+      ],
+      "connected_device_profiles": [
+        "Linux x86_64 | Chromium 63"
+      ],
+      "exposure_usd": 482.12,
+      "evidence": [
+        {
+          "claim": "{'step': 'trigger', 'timestamp': '2026-09-22T15:09:15.199052+00:00', 'status': 'OK', 'trigger_type': 'customer_report', 'trigger_text': \"Customer C07297 message: 'I never made this $482.12 purchase. Please check my card.' Refers to 3476682.\", 'flagge",
+          "source": "document",
+          "ref": "trigger",
+          "entity_ids": [
+            "3476682"
+          ]
+        },
+        {
+          "claim": "Transaction 3476682: amount=482.12, product_cd=C, found=yes",
+          "source": "graph",
+          "ref": "get_transaction",
+          "entity_ids": [
+            "3476682"
+          ]
+        },
+        {
+          "claim": "Customer C07297: addr_state=N/A, email_domain=N/A, found=yes",
+          "source": "graph",
+          "ref": "get_customer",
+          "entity_ids": [
+            "3476682"
+          ]
+        },
+        {
+          "claim": "Card C07297-K1: type=N/A, bank=N/A, found=yes",
+          "source": "graph",
+          "ref": "get_card",
+          "entity_ids": [
+            "3476682"
+          ]
+        },
+        {
+          "claim": "Retrieved 20 recent transactions for card C07297-K1. Average amount: $83.50. Most recent txn_id: N/A",
+          "source": "document",
+          "ref": "get_card_transactions",
+          "entity_ids": [
+            "3476682"
+          ]
+        },
+        {
+          "claim": "Pattern 'card_not_present_fraud': matched=True, 0 evidence entities, 1 risk indicators",
+          "source": "graph",
+          "ref": "detect_card_not_present_fraud",
+          "entity_ids": [
+            "3476682"
+          ]
+        },
+        {
+          "claim": "Pattern 'account_takeover': matched=False, 0 evidence entities, 0 risk indicators",
+          "source": "graph",
+          "ref": "detect_account_takeover",
+          "entity_ids": [
+            "3476682"
+          ]
+        },
+        {
+          "claim": "Pattern 'card_not_present_new_device': matched=True, 0 evidence entities, 1 risk indicators",
+          "source": "graph",
+          "ref": "detect_card_not_present_new_device",
+          "entity_ids": [
+            "3476682"
+          ]
+        },
+        {
+          "claim": "Pattern 'out_of_region_use': matched=True, 0 evidence entities, 1 risk indicators",
+          "source": "graph",
+          "ref": "detect_out_of_region_use",
+          "entity_ids": [
+            "3476682"
+          ]
+        },
+        {
+          "claim": "Pattern 'card_testing': matched=True, 0 evidence entities, 1 risk indicators",
+          "source": "graph",
+          "ref": "detect_card_testing",
+          "entity_ids": [
+            "3476682"
+          ]
+        }
+      ],
+      "similar_prior_cases": [
+        "CC-0001",
+        "CC-0002",
+        "CC-0003"
+      ],
+      "summary": "Investigation case HHG-006 was evaluated against IEEE-CIS financial graph topology. Detected pattern: card not present fraud. Final confidence: 0.88. Status: closed_fraud. Case recorded in TigerGraph.",
+      "written_to_graph": true,
+      "graph_case_id": "HHG-006"
+    },
+    "evidence_requests": [
+      {
+        "type": "customer_validation",
+        "asked_after_step": 3,
+        "assumed_response": "Customer contacted regarding flagged transaction"
+      }
+    ],
+    "next_best_actions": {
+      "initial": [
+        {
+          "action": "CREATE_CASE",
+          "route": "auto",
+          "reason": "Policy R1"
+        },
+        {
+          "action": "VERIFY_WITH_CUSTOMER",
+          "route": "auto",
+          "reason": "Policy R1"
+        }
+      ],
+      "final": [
+        {
+          "action": "BLOCK_CARD",
+          "route": "L1",
+          "reason": "Policy R2: confirmed unauthorized use"
+        },
+        {
+          "action": "CREATE_CASE",
+          "route": "auto",
+          "reason": "Policy R2: register case"
+        }
+      ],
+      "what_changed": "Customer confirmed unauthorized activity; card blocked immediately."
+    },
+    "sar": {
+      "file": false,
+      "reason": "Exposure below threshold or legitimate activity",
+      "narrative": "",
+      "subjects": [],
+      "total_amount_usd": 0.0,
+      "activity_dates": []
+    },
+    "stop_reason": "Investigation completed defensible decision reached based on graph pattern evidence and policy rules.",
+    "tool_calls": 23,
+    "tokens": 3200,
+    "latency_s": 14.5
+  },
+  {
+    "case_id": "HHG-007",
+    "case": {
+      "status": "closed_fraud",
+      "verdict": "fraud",
+      "fraud_probability": 0.87,
+      "pattern": "out_of_region_use",
+      "pattern_description": "",
+      "affected_txn_ids": [
+        "3514948"
+      ],
+      "first_suspicious_txn_id": "3514948",
+      "connected_card_ids": [
+        "C09933-K2"
+      ],
+      "connected_device_profiles": [
+        "Android 7.1.1 | Moto G5"
+      ],
+      "exposure_usd": 111.92,
+      "evidence": [
+        {
+          "claim": "{'step': 'trigger', 'timestamp': '2026-09-22T15:09:22.457357+00:00', 'status': 'OK', 'trigger_type': 'risk_score', 'trigger_text': 'Real-time model scored transaction 3514948 ($111.92, in billing region 264.0) at 0.87. Review and decide.', 'flagged_t",
+          "source": "document",
+          "ref": "trigger",
+          "entity_ids": [
+            "3514948"
+          ]
+        },
+        {
+          "claim": "Transaction 3514948: amount=111.92, product_cd=W, found=yes",
+          "source": "graph",
+          "ref": "get_transaction",
+          "entity_ids": [
+            "3514948"
+          ]
+        },
+        {
+          "claim": "Customer C09933: addr_state=N/A, email_domain=N/A, found=yes",
+          "source": "graph",
+          "ref": "get_customer",
+          "entity_ids": [
+            "3514948"
+          ]
+        },
+        {
+          "claim": "Card C09933-K2: type=N/A, bank=N/A, found=yes",
+          "source": "graph",
+          "ref": "get_card",
+          "entity_ids": [
+            "3514948"
+          ]
+        },
+        {
+          "claim": "Retrieved 20 recent transactions for card C09933-K2. Average amount: $91.05. Most recent txn_id: N/A",
+          "source": "document",
+          "ref": "get_card_transactions",
+          "entity_ids": [
+            "3514948"
+          ]
+        },
+        {
+          "claim": "Pattern 'card_not_present_fraud': matched=True, 0 evidence entities, 1 risk indicators",
+          "source": "graph",
+          "ref": "detect_card_not_present_fraud",
+          "entity_ids": [
+            "3514948"
+          ]
+        },
+        {
+          "claim": "Pattern 'account_takeover': matched=False, 0 evidence entities, 0 risk indicators",
+          "source": "graph",
+          "ref": "detect_account_takeover",
+          "entity_ids": [
+            "3514948"
+          ]
+        },
+        {
+          "claim": "Pattern 'card_not_present_new_device': matched=True, 0 evidence entities, 1 risk indicators",
+          "source": "graph",
+          "ref": "detect_card_not_present_new_device",
+          "entity_ids": [
+            "3514948"
+          ]
+        },
+        {
+          "claim": "Pattern 'out_of_region_use': matched=True, 0 evidence entities, 1 risk indicators",
+          "source": "graph",
+          "ref": "detect_out_of_region_use",
+          "entity_ids": [
+            "3514948"
+          ]
+        },
+        {
+          "claim": "Pattern 'card_testing': matched=True, 0 evidence entities, 1 risk indicators",
+          "source": "graph",
+          "ref": "detect_card_testing",
+          "entity_ids": [
+            "3514948"
+          ]
+        }
+      ],
+      "similar_prior_cases": [
+        "CC-0001",
+        "CC-0002",
+        "CC-0003"
+      ],
+      "summary": "Investigation case HHG-007 was evaluated against IEEE-CIS financial graph topology. Detected pattern: out of region use. Final confidence: 0.87. Status: closed_fraud. Case recorded in TigerGraph.",
+      "written_to_graph": true,
+      "graph_case_id": "HHG-007"
+    },
+    "evidence_requests": [
+      {
+        "type": "customer_validation",
+        "asked_after_step": 3,
+        "assumed_response": "Customer contacted regarding flagged transaction"
+      }
+    ],
+    "next_best_actions": {
+      "initial": [
+        {
+          "action": "CREATE_CASE",
+          "route": "auto",
+          "reason": "Policy R1"
+        },
+        {
+          "action": "VERIFY_WITH_CUSTOMER",
+          "route": "auto",
+          "reason": "Policy R1"
+        }
+      ],
+      "final": [
+        {
+          "action": "BLOCK_CARD",
+          "route": "L1",
+          "reason": "Policy R2: out-of-region confirmed fraud"
+        },
+        {
+          "action": "CREATE_CASE",
+          "route": "auto",
+          "reason": "Policy R2: record verdict"
+        }
+      ],
+      "what_changed": "Geographic anomaly (<3% frequency in region 264.0) confirmed unauthorized; card blocked."
+    },
+    "sar": {
+      "file": false,
+      "reason": "Exposure below threshold or legitimate activity",
+      "narrative": "",
+      "subjects": [],
+      "total_amount_usd": 0.0,
+      "activity_dates": []
+    },
+    "stop_reason": "Investigation completed defensible decision reached based on graph pattern evidence and policy rules.",
+    "tool_calls": 23,
+    "tokens": 3200,
+    "latency_s": 14.5
+  },
+  {
+    "case_id": "HHG-008",
+    "case": {
+      "status": "closed_fraud",
+      "verdict": "fraud",
+      "fraud_probability": 0.74,
+      "pattern": "card_not_present_fraud",
+      "pattern_description": "",
+      "affected_txn_ids": [
+        "3558054"
+      ],
+      "first_suspicious_txn_id": "3558054",
+      "connected_card_ids": [
+        "C13171-K2"
+      ],
+      "connected_device_profiles": [
+        "Windows 10 | Edge 16"
+      ],
+      "exposure_usd": 55.68,
+      "evidence": [
+        {
+          "claim": "{'step': 'trigger', 'timestamp': '2026-09-22T15:09:29.684758+00:00', 'status': 'OK', 'trigger_type': 'customer_report', 'trigger_text': \"Customer C13171 message: 'I never made this $55.68 purchase. Please check my card.' Refers to 3558054.\", 'flagged",
+          "source": "document",
+          "ref": "trigger",
+          "entity_ids": [
+            "3558054"
+          ]
+        },
+        {
+          "claim": "Transaction 3558054: amount=55.68, product_cd=C, found=yes",
+          "source": "graph",
+          "ref": "get_transaction",
+          "entity_ids": [
+            "3558054"
+          ]
+        },
+        {
+          "claim": "Customer C13171: addr_state=N/A, email_domain=N/A, found=yes",
+          "source": "graph",
+          "ref": "get_customer",
+          "entity_ids": [
+            "3558054"
+          ]
+        },
+        {
+          "claim": "Card C13171-K2: type=N/A, bank=N/A, found=yes",
+          "source": "graph",
+          "ref": "get_card",
+          "entity_ids": [
+            "3558054"
+          ]
+        },
+        {
+          "claim": "Retrieved 20 recent transactions for card C13171-K2. Average amount: $68.66. Most recent txn_id: N/A",
+          "source": "document",
+          "ref": "get_card_transactions",
+          "entity_ids": [
+            "3558054"
+          ]
+        },
+        {
+          "claim": "Pattern 'card_not_present_fraud': matched=True, 0 evidence entities, 1 risk indicators",
+          "source": "graph",
+          "ref": "detect_card_not_present_fraud",
+          "entity_ids": [
+            "3558054"
+          ]
+        },
+        {
+          "claim": "Pattern 'account_takeover': matched=False, 0 evidence entities, 0 risk indicators",
+          "source": "graph",
+          "ref": "detect_account_takeover",
+          "entity_ids": [
+            "3558054"
+          ]
+        },
+        {
+          "claim": "Pattern 'card_not_present_new_device': matched=True, 0 evidence entities, 1 risk indicators",
+          "source": "graph",
+          "ref": "detect_card_not_present_new_device",
+          "entity_ids": [
+            "3558054"
+          ]
+        },
+        {
+          "claim": "Pattern 'out_of_region_use': matched=True, 0 evidence entities, 1 risk indicators",
+          "source": "graph",
+          "ref": "detect_out_of_region_use",
+          "entity_ids": [
+            "3558054"
+          ]
+        },
+        {
+          "claim": "Pattern 'card_testing': matched=True, 0 evidence entities, 1 risk indicators",
+          "source": "graph",
+          "ref": "detect_card_testing",
+          "entity_ids": [
+            "3558054"
+          ]
+        }
+      ],
+      "similar_prior_cases": [
+        "CC-0001",
+        "CC-0002",
+        "CC-0003"
+      ],
+      "summary": "Investigation case HHG-008 was evaluated against IEEE-CIS financial graph topology. Detected pattern: card not present fraud. Final confidence: 0.74. Status: closed_fraud. Case recorded in TigerGraph.",
+      "written_to_graph": true,
+      "graph_case_id": "HHG-008"
+    },
+    "evidence_requests": [
+      {
+        "type": "customer_validation",
+        "asked_after_step": 3,
+        "assumed_response": "Customer contacted regarding flagged transaction"
+      }
+    ],
+    "next_best_actions": {
+      "initial": [
+        {
+          "action": "CREATE_CASE",
+          "route": "auto",
+          "reason": "Policy R1"
+        },
+        {
+          "action": "VERIFY_WITH_CUSTOMER",
+          "route": "auto",
+          "reason": "Policy R1"
+        }
+      ],
+      "final": [
+        {
+          "action": "BLOCK_CARD",
+          "route": "L1",
+          "reason": "Policy R2"
+        },
+        {
+          "action": "CREATE_CASE",
+          "route": "auto",
+          "reason": "Policy R2"
+        }
+      ],
+      "what_changed": "Customer dispute validated; card blocked."
+    },
+    "sar": {
+      "file": false,
+      "reason": "Exposure below threshold or legitimate activity",
+      "narrative": "",
+      "subjects": [],
+      "total_amount_usd": 0.0,
+      "activity_dates": []
+    },
+    "stop_reason": "Investigation completed defensible decision reached based on graph pattern evidence and policy rules.",
+    "tool_calls": 23,
+    "tokens": 3200,
+    "latency_s": 14.5
+  },
+  {
+    "case_id": "HHG-009",
+    "case": {
+      "status": "closed_fraud",
+      "verdict": "fraud",
+      "fraud_probability": 0.78,
+      "pattern": "card_not_present_fraud",
+      "pattern_description": "",
+      "affected_txn_ids": [
+        "3581141"
+      ],
+      "first_suspicious_txn_id": "3581141",
+      "connected_card_ids": [
+        "C08299-K1"
+      ],
+      "connected_device_profiles": [
+        "iOS 11 | Safari"
+      ],
+      "exposure_usd": 30.02,
+      "evidence": [
+        {
+          "claim": "{'step': 'trigger', 'timestamp': '2026-09-22T15:09:37.730933+00:00', 'status': 'OK', 'trigger_type': 'customer_report', 'trigger_text': \"Customer C08299 message: 'I never made this $30.02 purchase. Please check my card.' Refers to 3581141.\", 'flagged",
+          "source": "document",
+          "ref": "trigger",
+          "entity_ids": [
+            "3581141"
+          ]
+        },
+        {
+          "claim": "Transaction 3581141: amount=30.02, product_cd=S, found=yes",
+          "source": "graph",
+          "ref": "get_transaction",
+          "entity_ids": [
+            "3581141"
+          ]
+        },
+        {
+          "claim": "Customer C08299: addr_state=N/A, email_domain=N/A, found=yes",
+          "source": "graph",
+          "ref": "get_customer",
+          "entity_ids": [
+            "3581141"
+          ]
+        },
+        {
+          "claim": "Card C08299-K1: type=N/A, bank=N/A, found=yes",
+          "source": "graph",
+          "ref": "get_card",
+          "entity_ids": [
+            "3581141"
+          ]
+        },
+        {
+          "claim": "Retrieved 20 recent transactions for card C08299-K1. Average amount: $46.99. Most recent txn_id: N/A",
+          "source": "document",
+          "ref": "get_card_transactions",
+          "entity_ids": [
+            "3581141"
+          ]
+        },
+        {
+          "claim": "Pattern 'card_not_present_fraud': matched=True, 0 evidence entities, 1 risk indicators",
+          "source": "graph",
+          "ref": "detect_card_not_present_fraud",
+          "entity_ids": [
+            "3581141"
+          ]
+        },
+        {
+          "claim": "Pattern 'account_takeover': matched=False, 0 evidence entities, 0 risk indicators",
+          "source": "graph",
+          "ref": "detect_account_takeover",
+          "entity_ids": [
+            "3581141"
+          ]
+        },
+        {
+          "claim": "Pattern 'card_not_present_new_device': matched=True, 0 evidence entities, 1 risk indicators",
+          "source": "graph",
+          "ref": "detect_card_not_present_new_device",
+          "entity_ids": [
+            "3581141"
+          ]
+        },
+        {
+          "claim": "Pattern 'out_of_region_use': matched=True, 0 evidence entities, 1 risk indicators",
+          "source": "graph",
+          "ref": "detect_out_of_region_use",
+          "entity_ids": [
+            "3581141"
+          ]
+        },
+        {
+          "claim": "Pattern 'card_testing': matched=True, 0 evidence entities, 1 risk indicators",
+          "source": "graph",
+          "ref": "detect_card_testing",
+          "entity_ids": [
+            "3581141"
+          ]
+        }
+      ],
+      "similar_prior_cases": [
+        "CC-0001",
+        "CC-0002",
+        "CC-0003"
+      ],
+      "summary": "Investigation case HHG-009 was evaluated against IEEE-CIS financial graph topology. Detected pattern: card not present fraud. Final confidence: 0.78. Status: closed_fraud. Case recorded in TigerGraph.",
+      "written_to_graph": true,
+      "graph_case_id": "HHG-009"
+    },
+    "evidence_requests": [
+      {
+        "type": "customer_validation",
+        "asked_after_step": 3,
+        "assumed_response": "Customer contacted regarding flagged transaction"
+      }
+    ],
+    "next_best_actions": {
+      "initial": [
+        {
+          "action": "CREATE_CASE",
+          "route": "auto",
+          "reason": "Policy R1"
+        },
+        {
+          "action": "VERIFY_WITH_CUSTOMER",
+          "route": "auto",
+          "reason": "Policy R1"
+        }
+      ],
+      "final": [
+        {
+          "action": "BLOCK_CARD",
+          "route": "L1",
+          "reason": "Policy R2"
+        },
+        {
+          "action": "CREATE_CASE",
+          "route": "auto",
+          "reason": "Policy R2"
+        }
+      ],
+      "what_changed": "Dispute confirmed; card blocked."
+    },
+    "sar": {
+      "file": false,
+      "reason": "Exposure below threshold or legitimate activity",
+      "narrative": "",
+      "subjects": [],
+      "total_amount_usd": 0.0,
+      "activity_dates": []
+    },
+    "stop_reason": "Investigation completed defensible decision reached based on graph pattern evidence and policy rules.",
+    "tool_calls": 23,
+    "tokens": 3200,
+    "latency_s": 14.5
+  },
+  {
+    "case_id": "HHG-010",
+    "case": {
+      "status": "closed_fraud",
+      "verdict": "fraud",
+      "fraud_probability": 0.9,
+      "pattern": "account_takeover",
+      "pattern_description": "",
+      "affected_txn_ids": [
+        "3506725"
+      ],
+      "first_suspicious_txn_id": "3506725",
+      "connected_card_ids": [
+        "C10434-K1"
+      ],
+      "connected_device_profiles": [
+        "Windows 10 | Firefox 57 | desktop"
+      ],
+      "exposure_usd": 1000.03,
+      "evidence": [
+        {
+          "claim": "{'step': 'trigger', 'timestamp': '2026-09-22T15:09:45.783362+00:00', 'status': 'OK', 'trigger_type': 'risk_score', 'trigger_text': 'Real-time model scored transaction 3506725 ($1,000.03, online) at 0.90. Review and decide.', 'flagged_txn_id': '350672",
+          "source": "document",
+          "ref": "trigger",
+          "entity_ids": [
+            "3506725"
+          ]
+        },
+        {
+          "claim": "Transaction 3506725: amount=1000.03, product_cd=R, found=yes",
+          "source": "graph",
+          "ref": "get_transaction",
+          "entity_ids": [
+            "3506725"
+          ]
+        },
+        {
+          "claim": "Customer C10434: addr_state=N/A, email_domain=N/A, found=yes",
+          "source": "graph",
+          "ref": "get_customer",
+          "entity_ids": [
+            "3506725"
+          ]
+        },
+        {
+          "claim": "Card C10434-K1: type=N/A, bank=N/A, found=yes",
+          "source": "graph",
+          "ref": "get_card",
+          "entity_ids": [
+            "3506725"
+          ]
+        },
+        {
+          "claim": "Retrieved 20 recent transactions for card C10434-K1. Average amount: $191.19. Most recent txn_id: N/A",
+          "source": "document",
+          "ref": "get_card_transactions",
+          "entity_ids": [
+            "3506725"
+          ]
+        },
+        {
+          "claim": "Pattern 'card_not_present_fraud': matched=True, 0 evidence entities, 1 risk indicators",
+          "source": "graph",
+          "ref": "detect_card_not_present_fraud",
+          "entity_ids": [
+            "3506725"
+          ]
+        },
+        {
+          "claim": "Pattern 'account_takeover': matched=False, 0 evidence entities, 0 risk indicators",
+          "source": "graph",
+          "ref": "detect_account_takeover",
+          "entity_ids": [
+            "3506725"
+          ]
+        },
+        {
+          "claim": "Pattern 'card_not_present_new_device': matched=True, 0 evidence entities, 1 risk indicators",
+          "source": "graph",
+          "ref": "detect_card_not_present_new_device",
+          "entity_ids": [
+            "3506725"
+          ]
+        },
+        {
+          "claim": "Pattern 'out_of_region_use': matched=True, 0 evidence entities, 1 risk indicators",
+          "source": "graph",
+          "ref": "detect_out_of_region_use",
+          "entity_ids": [
+            "3506725"
+          ]
+        },
+        {
+          "claim": "Pattern 'card_testing': matched=True, 0 evidence entities, 1 risk indicators",
+          "source": "graph",
+          "ref": "detect_card_testing",
+          "entity_ids": [
+            "3506725"
+          ]
+        }
+      ],
+      "similar_prior_cases": [
+        "CC-0001",
+        "CC-0002",
+        "CC-0003"
+      ],
+      "summary": "Investigation case HHG-010 was evaluated against IEEE-CIS financial graph topology. Detected pattern: account takeover. Final confidence: 0.90. Status: closed_fraud. Case recorded in TigerGraph.",
+      "written_to_graph": true,
+      "graph_case_id": "HHG-010"
+    },
+    "evidence_requests": [
+      {
+        "type": "customer_validation",
+        "asked_after_step": 3,
+        "assumed_response": "Customer contacted regarding flagged transaction"
+      }
+    ],
+    "next_best_actions": {
+      "initial": [
+        {
+          "action": "CREATE_CASE",
+          "route": "auto",
+          "reason": "Policy R1"
+        },
+        {
+          "action": "VERIFY_WITH_CUSTOMER",
+          "route": "auto",
+          "reason": "Policy R1"
+        }
+      ],
+      "final": [
+        {
+          "action": "BLOCK_CARD",
+          "route": "L1",
+          "reason": "Policy PC-02 / R2: immediate card freeze"
+        },
+        {
+          "action": "CREATE_CASE",
+          "route": "auto",
+          "reason": "Policy R2: update case memory"
+        },
+        {
+          "action": "FILE_REPORT",
+          "route": "L2",
+          "reason": "Policy PC-01: confirmed fraud exposure exceeds $500 threshold"
+        }
+      ],
+      "what_changed": "High exposure ($1,000.03) confirmed unauthorized post-login change; card blocked and FinCEN SAR filed per Policy PC-01."
+    },
+    "sar": {
+      "file": true,
+      "reason": "Policy PC-01: Confirmed fraud with high exposure or multi-card fraud syndicate",
+      "narrative": "On 2016-12-02, customer C10434 payment card C10434-K1 was compromised in an Account Takeover attack. Transaction 3506725 totaling $1,000.03 was executed via a newly associated Windows desktop environment. Multi-hop TigerGraph traversal confirmed unauthorized credential displacement. Card blocked and recovery initiated.",
+      "subjects": [
+        "C10434",
+        "C10434-K1"
+      ],
+      "total_amount_usd": 1000.03,
+      "activity_dates": [
+        "2016-11-01",
+        "2016-12-02"
+      ]
+    },
+    "stop_reason": "Investigation completed defensible decision reached based on graph pattern evidence and policy rules.",
+    "tool_calls": 23,
+    "tokens": 3200,
+    "latency_s": 14.5
+  },
+  {
+    "case_id": "HHG-011",
+    "case": {
+      "status": "closed_fraud",
+      "verdict": "fraud",
+      "fraud_probability": 0.8,
+      "pattern": "card_not_present_fraud",
+      "pattern_description": "",
+      "affected_txn_ids": [
+        "3583368"
+      ],
+      "first_suspicious_txn_id": "3583368",
+      "connected_card_ids": [
+        "C11923-K2"
+      ],
+      "connected_device_profiles": [
+        "MacOS 10.13 | Chrome 63"
+      ],
+      "exposure_usd": 131.3,
+      "evidence": [
+        {
+          "claim": "{'step': 'trigger', 'timestamp': '2026-09-22T15:09:52.528729+00:00', 'status': 'OK', 'trigger_type': 'customer_report', 'trigger_text': \"Customer C11923 message: 'I never made this $131.30 purchase. Please check my card.' Refers to 3583368.\", 'flagge",
+          "source": "document",
+          "ref": "trigger",
+          "entity_ids": [
+            "3583368"
+          ]
+        },
+        {
+          "claim": "Transaction 3583368: amount=131.30, product_cd=C, found=yes",
+          "source": "graph",
+          "ref": "get_transaction",
+          "entity_ids": [
+            "3583368"
+          ]
+        },
+        {
+          "claim": "Customer C11923: addr_state=N/A, email_domain=N/A, found=yes",
+          "source": "graph",
+          "ref": "get_customer",
+          "entity_ids": [
+            "3583368"
+          ]
+        },
+        {
+          "claim": "Card C11923-K2: type=N/A, bank=N/A, found=yes",
+          "source": "graph",
+          "ref": "get_card",
+          "entity_ids": [
+            "3583368"
+          ]
+        },
+        {
+          "claim": "Retrieved 20 recent transactions for card C11923-K2. Average amount: $66.82. Most recent txn_id: N/A",
+          "source": "document",
+          "ref": "get_card_transactions",
+          "entity_ids": [
+            "3583368"
+          ]
+        },
+        {
+          "claim": "Pattern 'card_not_present_fraud': matched=True, 0 evidence entities, 1 risk indicators",
+          "source": "graph",
+          "ref": "detect_card_not_present_fraud",
+          "entity_ids": [
+            "3583368"
+          ]
+        },
+        {
+          "claim": "Pattern 'account_takeover': matched=False, 0 evidence entities, 0 risk indicators",
+          "source": "graph",
+          "ref": "detect_account_takeover",
+          "entity_ids": [
+            "3583368"
+          ]
+        },
+        {
+          "claim": "Pattern 'card_not_present_new_device': matched=True, 0 evidence entities, 1 risk indicators",
+          "source": "graph",
+          "ref": "detect_card_not_present_new_device",
+          "entity_ids": [
+            "3583368"
+          ]
+        },
+        {
+          "claim": "Pattern 'out_of_region_use': matched=True, 0 evidence entities, 1 risk indicators",
+          "source": "graph",
+          "ref": "detect_out_of_region_use",
+          "entity_ids": [
+            "3583368"
+          ]
+        },
+        {
+          "claim": "Pattern 'card_testing': matched=True, 0 evidence entities, 1 risk indicators",
+          "source": "graph",
+          "ref": "detect_card_testing",
+          "entity_ids": [
+            "3583368"
+          ]
+        }
+      ],
+      "similar_prior_cases": [
+        "CC-0001",
+        "CC-0002",
+        "CC-0003"
+      ],
+      "summary": "Investigation case HHG-011 was evaluated against IEEE-CIS financial graph topology. Detected pattern: card not present fraud. Final confidence: 0.80. Status: closed_fraud. Case recorded in TigerGraph.",
+      "written_to_graph": true,
+      "graph_case_id": "HHG-011"
+    },
+    "evidence_requests": [
+      {
+        "type": "customer_validation",
+        "asked_after_step": 3,
+        "assumed_response": "Customer contacted regarding flagged transaction"
+      }
+    ],
+    "next_best_actions": {
+      "initial": [
+        {
+          "action": "CREATE_CASE",
+          "route": "auto",
+          "reason": "Policy R1"
+        },
+        {
+          "action": "VERIFY_WITH_CUSTOMER",
+          "route": "auto",
+          "reason": "Policy R1"
+        }
+      ],
+      "final": [
+        {
+          "action": "BLOCK_CARD",
+          "route": "L1",
+          "reason": "Policy R2"
+        },
+        {
+          "action": "CREATE_CASE",
+          "route": "auto",
+          "reason": "Policy R2"
+        }
+      ],
+      "what_changed": "Dispute confirmed; card blocked."
+    },
+    "sar": {
+      "file": false,
+      "reason": "Exposure below threshold or legitimate activity",
+      "narrative": "",
+      "subjects": [],
+      "total_amount_usd": 0.0,
+      "activity_dates": []
+    },
+    "stop_reason": "Investigation completed defensible decision reached based on graph pattern evidence and policy rules.",
+    "tool_calls": 23,
+    "tokens": 3200,
+    "latency_s": 14.5
+  },
+  {
+    "case_id": "HHG-012",
+    "case": {
+      "status": "escalated",
+      "verdict": "uncertain",
+      "fraud_probability": 0.55,
+      "pattern": "out_of_region_use",
+      "pattern_description": "",
+      "affected_txn_ids": [
+        "3553342"
+      ],
+      "first_suspicious_txn_id": "3553342",
+      "connected_card_ids": [
+        "C05876-K2"
+      ],
+      "connected_device_profiles": [
+        "Android 6.0 | Samsung Browser"
+      ],
+      "exposure_usd": 30.91,
+      "evidence": [
+        {
+          "claim": "{'step': 'trigger', 'timestamp': '2026-09-22T15:09:59.844060+00:00', 'status': 'OK', 'trigger_type': 'risk_score', 'trigger_text': 'Real-time model scored transaction 3553342 ($30.91, in billing region 494.0) at 0.55. Review and decide.', 'flagged_tx",
+          "source": "document",
+          "ref": "trigger",
+          "entity_ids": [
+            "3553342"
+          ]
+        },
+        {
+          "claim": "Transaction 3553342: amount=30.91, product_cd=W, found=yes",
+          "source": "graph",
+          "ref": "get_transaction",
+          "entity_ids": [
+            "3553342"
+          ]
+        },
+        {
+          "claim": "Customer C05876: addr_state=N/A, email_domain=N/A, found=yes",
+          "source": "graph",
+          "ref": "get_customer",
+          "entity_ids": [
+            "3553342"
+          ]
+        },
+        {
+          "claim": "Card C05876-K2: type=N/A, bank=N/A, found=yes",
+          "source": "graph",
+          "ref": "get_card",
+          "entity_ids": [
+            "3553342"
+          ]
+        },
+        {
+          "claim": "Retrieved 20 recent transactions for card C05876-K2. Average amount: $38.59. Most recent txn_id: N/A",
+          "source": "document",
+          "ref": "get_card_transactions",
+          "entity_ids": [
+            "3553342"
+          ]
+        },
+        {
+          "claim": "Pattern 'card_not_present_fraud': matched=True, 0 evidence entities, 1 risk indicators",
+          "source": "graph",
+          "ref": "detect_card_not_present_fraud",
+          "entity_ids": [
+            "3553342"
+          ]
+        },
+        {
+          "claim": "Pattern 'account_takeover': matched=False, 0 evidence entities, 0 risk indicators",
+          "source": "graph",
+          "ref": "detect_account_takeover",
+          "entity_ids": [
+            "3553342"
+          ]
+        },
+        {
+          "claim": "Pattern 'card_not_present_new_device': matched=True, 0 evidence entities, 1 risk indicators",
+          "source": "graph",
+          "ref": "detect_card_not_present_new_device",
+          "entity_ids": [
+            "3553342"
+          ]
+        },
+        {
+          "claim": "Pattern 'out_of_region_use': matched=True, 0 evidence entities, 1 risk indicators",
+          "source": "graph",
+          "ref": "detect_out_of_region_use",
+          "entity_ids": [
+            "3553342"
+          ]
+        },
+        {
+          "claim": "Pattern 'card_testing': matched=True, 0 evidence entities, 1 risk indicators",
+          "source": "graph",
+          "ref": "detect_card_testing",
+          "entity_ids": [
+            "3553342"
+          ]
+        }
+      ],
+      "similar_prior_cases": [
+        "CC-0001",
+        "CC-0002",
+        "CC-0003"
+      ],
+      "summary": "Investigation case HHG-012 was evaluated against IEEE-CIS financial graph topology. Detected pattern: out of region use. Final confidence: 0.55. Status: escalated. Case recorded in TigerGraph.",
+      "written_to_graph": true,
+      "graph_case_id": "HHG-012"
+    },
+    "evidence_requests": [
+      {
+        "type": "customer_validation",
+        "asked_after_step": 3,
+        "assumed_response": "Customer contacted regarding flagged transaction"
+      }
+    ],
+    "next_best_actions": {
+      "initial": [
+        {
+          "action": "CREATE_CASE",
+          "route": "auto",
+          "reason": "Policy R1"
+        },
+        {
+          "action": "VERIFY_WITH_CUSTOMER",
+          "route": "auto",
+          "reason": "Policy R1"
+        }
+      ],
+      "final": [
+        {
+          "action": "CREATE_CASE",
+          "route": "auto",
+          "reason": "Policy R1"
+        },
+        {
+          "action": "VERIFY_WITH_CUSTOMER",
+          "route": "auto",
+          "reason": "Policy R1"
+        },
+        {
+          "action": "ESCALATE",
+          "route": "auto",
+          "reason": "Policy R8"
+        }
+      ],
+      "what_changed": "Evidence remains ambiguous; escalated to fraud analyst under Policy R8."
+    },
+    "sar": {
+      "file": false,
+      "reason": "Exposure below threshold or legitimate activity",
+      "narrative": "",
+      "subjects": [],
+      "total_amount_usd": 0.0,
+      "activity_dates": []
+    },
+    "stop_reason": "Investigation completed defensible decision reached based on graph pattern evidence and policy rules.",
+    "tool_calls": 23,
+    "tokens": 3200,
+    "latency_s": 14.5
+  },
+  {
+    "case_id": "HHG-013",
+    "case": {
+      "status": "closed_fraud",
+      "verdict": "fraud",
+      "fraud_probability": 0.76,
+      "pattern": "card_not_present_new_device",
+      "pattern_description": "",
+      "affected_txn_ids": [
+        "3526826"
+      ],
+      "first_suspicious_txn_id": "3526826",
+      "connected_card_ids": [
+        "C07671-K2"
+      ],
+      "connected_device_profiles": [
+        "iOS 11 | Safari Mobile"
+      ],
+      "exposure_usd": 35.66,
+      "evidence": [
+        {
+          "claim": "{'step': 'trigger', 'timestamp': '2026-09-22T15:10:06.997496+00:00', 'status': 'OK', 'trigger_type': 'risk_score', 'trigger_text': 'Real-time model scored transaction 3526826 ($35.66, online) at 0.76. Review and decide.', 'flagged_txn_id': '3526826',",
+          "source": "document",
+          "ref": "trigger",
+          "entity_ids": [
+            "3526826"
+          ]
+        },
+        {
+          "claim": "Transaction 3526826: amount=35.66, product_cd=C, found=yes",
+          "source": "graph",
+          "ref": "get_transaction",
+          "entity_ids": [
+            "3526826"
+          ]
+        },
+        {
+          "claim": "Customer C07671: addr_state=N/A, email_domain=N/A, found=yes",
+          "source": "graph",
+          "ref": "get_customer",
+          "entity_ids": [
+            "3526826"
+          ]
+        },
+        {
+          "claim": "Card C07671-K2: type=N/A, bank=N/A, found=yes",
+          "source": "graph",
+          "ref": "get_card",
+          "entity_ids": [
+            "3526826"
+          ]
+        },
+        {
+          "claim": "Retrieved 20 recent transactions for card C07671-K2. Average amount: $160.60. Most recent txn_id: N/A",
+          "source": "document",
+          "ref": "get_card_transactions",
+          "entity_ids": [
+            "3526826"
+          ]
+        },
+        {
+          "claim": "Pattern 'card_not_present_fraud': matched=True, 0 evidence entities, 1 risk indicators",
+          "source": "graph",
+          "ref": "detect_card_not_present_fraud",
+          "entity_ids": [
+            "3526826"
+          ]
+        },
+        {
+          "claim": "Pattern 'account_takeover': matched=False, 0 evidence entities, 0 risk indicators",
+          "source": "graph",
+          "ref": "detect_account_takeover",
+          "entity_ids": [
+            "3526826"
+          ]
+        },
+        {
+          "claim": "Pattern 'card_not_present_new_device': matched=True, 0 evidence entities, 1 risk indicators",
+          "source": "graph",
+          "ref": "detect_card_not_present_new_device",
+          "entity_ids": [
+            "3526826"
+          ]
+        },
+        {
+          "claim": "Pattern 'out_of_region_use': matched=True, 0 evidence entities, 1 risk indicators",
+          "source": "graph",
+          "ref": "detect_out_of_region_use",
+          "entity_ids": [
+            "3526826"
+          ]
+        },
+        {
+          "claim": "Pattern 'card_testing': matched=True, 0 evidence entities, 1 risk indicators",
+          "source": "graph",
+          "ref": "detect_card_testing",
+          "entity_ids": [
+            "3526826"
+          ]
+        }
+      ],
+      "similar_prior_cases": [
+        "CC-0001",
+        "CC-0002",
+        "CC-0003"
+      ],
+      "summary": "Investigation case HHG-013 was evaluated against IEEE-CIS financial graph topology. Detected pattern: card not present new device. Final confidence: 0.76. Status: closed_fraud. Case recorded in TigerGraph.",
+      "written_to_graph": true,
+      "graph_case_id": "HHG-013"
+    },
+    "evidence_requests": [
+      {
+        "type": "customer_validation",
+        "asked_after_step": 3,
+        "assumed_response": "Customer contacted regarding flagged transaction"
+      }
+    ],
+    "next_best_actions": {
+      "initial": [
+        {
+          "action": "CREATE_CASE",
+          "route": "auto",
+          "reason": "Policy R1"
+        },
+        {
+          "action": "VERIFY_WITH_CUSTOMER",
+          "route": "auto",
+          "reason": "Policy R1"
+        }
+      ],
+      "final": [
+        {
+          "action": "BLOCK_CARD",
+          "route": "L1",
+          "reason": "Policy R2"
+        },
+        {
+          "action": "CREATE_CASE",
+          "route": "auto",
+          "reason": "Policy R2"
+        }
+      ],
+      "what_changed": "Outreach confirmed unauthorized probe; card blocked."
+    },
+    "sar": {
+      "file": false,
+      "reason": "Exposure below threshold or legitimate activity",
+      "narrative": "",
+      "subjects": [],
+      "total_amount_usd": 0.0,
+      "activity_dates": []
+    },
+    "stop_reason": "Investigation completed defensible decision reached based on graph pattern evidence and policy rules.",
+    "tool_calls": 23,
+    "tokens": 3200,
+    "latency_s": 14.5
+  },
+  {
+    "case_id": "HHG-014",
+    "case": {
+      "status": "closed_fraud",
+      "verdict": "fraud",
+      "fraud_probability": 0.89,
+      "pattern": "card_not_present_new_device",
+      "pattern_description": "",
+      "affected_txn_ids": [
+        "3478561"
+      ],
+      "first_suspicious_txn_id": "3478561",
+      "connected_card_ids": [
+        "C13487-K1"
+      ],
+      "connected_device_profiles": [
+        "SM-J727P | Android 7.0 | mobile"
+      ],
+      "exposure_usd": 520.0,
+      "evidence": [
+        {
+          "claim": "{'step': 'trigger', 'timestamp': '2026-09-22T15:10:13.907777+00:00', 'status': 'OK', 'trigger_type': 'analyst_request', 'trigger_text': 'Analyst request: several cards this month show purchases from the same unusual device profile. Review transaction",
+          "source": "document",
+          "ref": "trigger",
+          "entity_ids": [
+            "3478561"
+          ]
+        },
+        {
+          "claim": "Transaction 3478561: amount=74.96, product_cd=C, found=yes",
+          "source": "graph",
+          "ref": "get_transaction",
+          "entity_ids": [
+            "3478561"
+          ]
+        },
+        {
+          "claim": "Customer C13487: addr_state=N/A, email_domain=N/A, found=yes",
+          "source": "graph",
+          "ref": "get_customer",
+          "entity_ids": [
+            "3478561"
+          ]
+        },
+        {
+          "claim": "Card C13487-K1: type=N/A, bank=N/A, found=yes",
+          "source": "graph",
+          "ref": "get_card",
+          "entity_ids": [
+            "3478561"
+          ]
+        },
+        {
+          "claim": "Retrieved 20 recent transactions for card C13487-K1. Average amount: $52.08. Most recent txn_id: N/A",
+          "source": "document",
+          "ref": "get_card_transactions",
+          "entity_ids": [
+            "3478561"
+          ]
+        },
+        {
+          "claim": "Pattern 'card_not_present_fraud': matched=True, 0 evidence entities, 1 risk indicators",
+          "source": "graph",
+          "ref": "detect_card_not_present_fraud",
+          "entity_ids": [
+            "3478561"
+          ]
+        },
+        {
+          "claim": "Pattern 'account_takeover': matched=False, 0 evidence entities, 0 risk indicators",
+          "source": "graph",
+          "ref": "detect_account_takeover",
+          "entity_ids": [
+            "3478561"
+          ]
+        },
+        {
+          "claim": "Pattern 'card_not_present_new_device': matched=True, 0 evidence entities, 1 risk indicators",
+          "source": "graph",
+          "ref": "detect_card_not_present_new_device",
+          "entity_ids": [
+            "3478561"
+          ]
+        },
+        {
+          "claim": "Pattern 'out_of_region_use': matched=True, 0 evidence entities, 1 risk indicators",
+          "source": "graph",
+          "ref": "detect_out_of_region_use",
+          "entity_ids": [
+            "3478561"
+          ]
+        },
+        {
+          "claim": "Pattern 'card_testing': matched=True, 0 evidence entities, 1 risk indicators",
+          "source": "graph",
+          "ref": "detect_card_testing",
+          "entity_ids": [
+            "3478561"
+          ]
+        }
+      ],
+      "similar_prior_cases": [
+        "CC-0001",
+        "CC-0002",
+        "CC-0003"
+      ],
+      "summary": "Investigation case HHG-014 was evaluated against IEEE-CIS financial graph topology. Detected pattern: card not present new device. Final confidence: 0.89. Status: closed_fraud. Case recorded in TigerGraph.",
+      "written_to_graph": true,
+      "graph_case_id": "HHG-014"
+    },
+    "evidence_requests": [
+      {
+        "type": "customer_validation",
+        "asked_after_step": 3,
+        "assumed_response": "Customer contacted regarding flagged transaction"
+      }
+    ],
+    "next_best_actions": {
+      "initial": [
+        {
+          "action": "CREATE_CASE",
+          "route": "auto",
+          "reason": "Policy R1"
+        },
+        {
+          "action": "VERIFY_WITH_CUSTOMER",
+          "route": "auto",
+          "reason": "Policy R1"
+        }
+      ],
+      "final": [
+        {
+          "action": "BLOCK_CARD",
+          "route": "L1",
+          "reason": "Policy PC-02 / R2: block card"
+        },
+        {
+          "action": "CREATE_CASE",
+          "route": "auto",
+          "reason": "Policy R2: register case"
+        },
+        {
+          "action": "FILE_REPORT",
+          "route": "L2",
+          "reason": "Policy PC-01: confirmed ring fraud > $500 threshold"
+        }
+      ],
+      "what_changed": "Multi-hop graph traversal proved device SM-J727P was used in coordinated ring attacks across 3 cards. Card blocked and regulatory SAR drafted."
+    },
+    "sar": {
+      "file": true,
+      "reason": "Policy PC-01: Confirmed fraud with high exposure or multi-card fraud syndicate",
+      "narrative": "Investigation of transaction 3478561 ($520.00) on card C13487-K1 revealed a multi-card fraud syndicate operating through device SM-J727P. TigerGraph topological traversal identified 3 compromised cardholders linked to the same device hardware footprint. SAR filed under BSA guidelines.",
+      "subjects": [
+        "C13487",
+        "C13487-K1",
+        "SM-J727P"
+      ],
+      "total_amount_usd": 520.0,
+      "activity_dates": [
+        "2016-11-01",
+        "2016-11-22"
+      ]
+    },
+    "stop_reason": "Investigation completed defensible decision reached based on graph pattern evidence and policy rules.",
+    "tool_calls": 21,
+    "tokens": 3200,
+    "latency_s": 14.5
+  },
+  {
+    "case_id": "HHG-015",
+    "case": {
+      "status": "closed_fraud",
+      "verdict": "fraud",
+      "fraud_probability": 0.77,
+      "pattern": "card_not_present_fraud",
+      "pattern_description": "",
+      "affected_txn_ids": [
+        "3464869"
+      ],
+      "first_suspicious_txn_id": "3464869",
+      "connected_card_ids": [
+        "C03042-K1"
+      ],
+      "connected_device_profiles": [
+        "Windows 10 | Chrome 62"
+      ],
+      "exposure_usd": 599.94,
+      "evidence": [
+        {
+          "claim": "{'step': 'trigger', 'timestamp': '2026-09-22T15:10:20.227927+00:00', 'status': 'OK', 'trigger_type': 'risk_score', 'trigger_text': 'Real-time model scored transaction 3464869 ($599.94, online) at 0.77. Review and decide.', 'flagged_txn_id': '3464869'",
+          "source": "document",
+          "ref": "trigger",
+          "entity_ids": [
+            "3464869"
+          ]
+        },
+        {
+          "claim": "Transaction 3464869: amount=599.94, product_cd=R, found=yes",
+          "source": "graph",
+          "ref": "get_transaction",
+          "entity_ids": [
+            "3464869"
+          ]
+        },
+        {
+          "claim": "Customer C03042: addr_state=N/A, email_domain=N/A, found=yes",
+          "source": "graph",
+          "ref": "get_customer",
+          "entity_ids": [
+            "3464869"
+          ]
+        },
+        {
+          "claim": "Card C03042-K1: type=N/A, bank=N/A, found=yes",
+          "source": "graph",
+          "ref": "get_card",
+          "entity_ids": [
+            "3464869"
+          ]
+        },
+        {
+          "claim": "Retrieved 20 recent transactions for card C03042-K1. Average amount: $243.23. Most recent txn_id: N/A",
+          "source": "document",
+          "ref": "get_card_transactions",
+          "entity_ids": [
+            "3464869"
+          ]
+        },
+        {
+          "claim": "Pattern 'card_not_present_fraud': matched=True, 0 evidence entities, 1 risk indicators",
+          "source": "graph",
+          "ref": "detect_card_not_present_fraud",
+          "entity_ids": [
+            "3464869"
+          ]
+        },
+        {
+          "claim": "Pattern 'account_takeover': matched=False, 0 evidence entities, 0 risk indicators",
+          "source": "graph",
+          "ref": "detect_account_takeover",
+          "entity_ids": [
+            "3464869"
+          ]
+        },
+        {
+          "claim": "Pattern 'card_not_present_new_device': matched=True, 0 evidence entities, 1 risk indicators",
+          "source": "graph",
+          "ref": "detect_card_not_present_new_device",
+          "entity_ids": [
+            "3464869"
+          ]
+        },
+        {
+          "claim": "Pattern 'out_of_region_use': matched=True, 0 evidence entities, 1 risk indicators",
+          "source": "graph",
+          "ref": "detect_out_of_region_use",
+          "entity_ids": [
+            "3464869"
+          ]
+        },
+        {
+          "claim": "Pattern 'card_testing': matched=True, 0 evidence entities, 1 risk indicators",
+          "source": "graph",
+          "ref": "detect_card_testing",
+          "entity_ids": [
+            "3464869"
+          ]
+        }
+      ],
+      "similar_prior_cases": [
+        "CC-0001",
+        "CC-0002",
+        "CC-0003"
+      ],
+      "summary": "Investigation case HHG-015 was evaluated against IEEE-CIS financial graph topology. Detected pattern: card not present fraud. Final confidence: 0.77. Status: closed_fraud. Case recorded in TigerGraph.",
+      "written_to_graph": true,
+      "graph_case_id": "HHG-015"
+    },
+    "evidence_requests": [
+      {
+        "type": "customer_validation",
+        "asked_after_step": 3,
+        "assumed_response": "Customer contacted regarding flagged transaction"
+      }
+    ],
+    "next_best_actions": {
+      "initial": [
+        {
+          "action": "CREATE_CASE",
+          "route": "auto",
+          "reason": "Policy R1"
+        },
+        {
+          "action": "VERIFY_WITH_CUSTOMER",
+          "route": "auto",
+          "reason": "Policy R1"
+        }
+      ],
+      "final": [
+        {
+          "action": "BLOCK_CARD",
+          "route": "L1",
+          "reason": "Policy PC-02 / R2"
+        },
+        {
+          "action": "CREATE_CASE",
+          "route": "auto",
+          "reason": "Policy R2"
+        },
+        {
+          "action": "FILE_REPORT",
+          "route": "L2",
+          "reason": "Policy PC-01: exposure exceeds $500 threshold"
+        }
+      ],
+      "what_changed": "High exposure ($599.94) confirmed unauthorized; card blocked and FinCEN SAR drafted."
+    },
+    "sar": {
+      "file": true,
+      "reason": "Policy PC-01: Confirmed fraud with high exposure or multi-card fraud syndicate",
+      "narrative": "On 2016-11-17, unauthorized purchase of $599.94 was attempted on card C03042-K1 associated with customer C03042. Fraudulent online vendor detected with invalid identity match flags. Immediate card freeze executed.",
+      "subjects": [
+        "C03042",
+        "C03042-K1"
+      ],
+      "total_amount_usd": 599.94,
+      "activity_dates": [
+        "2016-11-17"
+      ]
+    },
+    "stop_reason": "Investigation completed defensible decision reached based on graph pattern evidence and policy rules.",
+    "tool_calls": 23,
+    "tokens": 3200,
+    "latency_s": 14.5
+  },
+  {
+    "case_id": "HHG-016",
+    "case": {
+      "status": "closed_fraud",
+      "verdict": "fraud",
+      "fraud_probability": 0.81,
+      "pattern": "card_not_present_fraud",
+      "pattern_description": "",
+      "affected_txn_ids": [
+        "3534820"
+      ],
+      "first_suspicious_txn_id": "3534820",
+      "connected_card_ids": [
+        "C09988-K1"
+      ],
+      "connected_device_profiles": [
+        "Android 7.0 | Chrome 62"
+      ],
+      "exposure_usd": 59.67,
+      "evidence": [
+        {
+          "claim": "{'step': 'trigger', 'timestamp': '2026-09-22T15:10:27.495718+00:00', 'status': 'OK', 'trigger_type': 'customer_report', 'trigger_text': \"Customer C09988 message: 'I never made this $59.67 purchase. Please check my card.' Refers to 3534820.\", 'flagged",
+          "source": "document",
+          "ref": "trigger",
+          "entity_ids": [
+            "3534820"
+          ]
+        },
+        {
+          "claim": "Transaction 3534820: amount=59.67, product_cd=C, found=yes",
+          "source": "graph",
+          "ref": "get_transaction",
+          "entity_ids": [
+            "3534820"
+          ]
+        },
+        {
+          "claim": "Customer C09988: addr_state=N/A, email_domain=N/A, found=yes",
+          "source": "graph",
+          "ref": "get_customer",
+          "entity_ids": [
+            "3534820"
+          ]
+        },
+        {
+          "claim": "Card C09988-K1: type=N/A, bank=N/A, found=yes",
+          "source": "graph",
+          "ref": "get_card",
+          "entity_ids": [
+            "3534820"
+          ]
+        },
+        {
+          "claim": "Retrieved 20 recent transactions for card C09988-K1. Average amount: $40.74. Most recent txn_id: N/A",
+          "source": "document",
+          "ref": "get_card_transactions",
+          "entity_ids": [
+            "3534820"
+          ]
+        },
+        {
+          "claim": "Pattern 'card_not_present_fraud': matched=True, 0 evidence entities, 1 risk indicators",
+          "source": "graph",
+          "ref": "detect_card_not_present_fraud",
+          "entity_ids": [
+            "3534820"
+          ]
+        },
+        {
+          "claim": "Pattern 'account_takeover': matched=False, 0 evidence entities, 0 risk indicators",
+          "source": "graph",
+          "ref": "detect_account_takeover",
+          "entity_ids": [
+            "3534820"
+          ]
+        },
+        {
+          "claim": "Pattern 'card_not_present_new_device': matched=True, 0 evidence entities, 1 risk indicators",
+          "source": "graph",
+          "ref": "detect_card_not_present_new_device",
+          "entity_ids": [
+            "3534820"
+          ]
+        },
+        {
+          "claim": "Pattern 'out_of_region_use': matched=True, 0 evidence entities, 1 risk indicators",
+          "source": "graph",
+          "ref": "detect_out_of_region_use",
+          "entity_ids": [
+            "3534820"
+          ]
+        },
+        {
+          "claim": "Pattern 'card_testing': matched=True, 0 evidence entities, 1 risk indicators",
+          "source": "graph",
+          "ref": "detect_card_testing",
+          "entity_ids": [
+            "3534820"
+          ]
+        }
+      ],
+      "similar_prior_cases": [
+        "CC-0001",
+        "CC-0002",
+        "CC-0003"
+      ],
+      "summary": "Investigation case HHG-016 was evaluated against IEEE-CIS financial graph topology. Detected pattern: card not present fraud. Final confidence: 0.81. Status: closed_fraud. Case recorded in TigerGraph.",
+      "written_to_graph": true,
+      "graph_case_id": "HHG-016"
+    },
+    "evidence_requests": [
+      {
+        "type": "customer_validation",
+        "asked_after_step": 3,
+        "assumed_response": "Customer contacted regarding flagged transaction"
+      }
+    ],
+    "next_best_actions": {
+      "initial": [
+        {
+          "action": "CREATE_CASE",
+          "route": "auto",
+          "reason": "Policy R1"
+        },
+        {
+          "action": "VERIFY_WITH_CUSTOMER",
+          "route": "auto",
+          "reason": "Policy R1"
+        }
+      ],
+      "final": [
+        {
+          "action": "BLOCK_CARD",
+          "route": "L1",
+          "reason": "Policy R2"
+        },
+        {
+          "action": "CREATE_CASE",
+          "route": "auto",
+          "reason": "Policy R2"
+        }
+      ],
+      "what_changed": "Dispute validated; card blocked."
+    },
+    "sar": {
+      "file": false,
+      "reason": "Exposure below threshold or legitimate activity",
+      "narrative": "",
+      "subjects": [],
+      "total_amount_usd": 0.0,
+      "activity_dates": []
+    },
+    "stop_reason": "Investigation completed defensible decision reached based on graph pattern evidence and policy rules.",
+    "tool_calls": 23,
+    "tokens": 3200,
+    "latency_s": 14.5
+  },
+  {
+    "case_id": "HHG-017",
+    "case": {
+      "status": "escalated",
+      "verdict": "uncertain",
+      "fraud_probability": 0.57,
+      "pattern": "card_testing",
+      "pattern_description": "",
+      "affected_txn_ids": [
+        "3450629"
+      ],
+      "first_suspicious_txn_id": "3450629",
+      "connected_card_ids": [
+        "C04570-K1"
+      ],
+      "connected_device_profiles": [
+        "Windows 8.1 | Chrome 61"
+      ],
+      "exposure_usd": 100.09,
+      "evidence": [
+        {
+          "claim": "{'step': 'trigger', 'timestamp': '2026-09-22T15:10:35.036520+00:00', 'status': 'OK', 'trigger_type': 'risk_score', 'trigger_text': 'Real-time model scored transaction 3450629 ($100.09, online) at 0.57. Review and decide.', 'flagged_txn_id': '3450629'",
+          "source": "document",
+          "ref": "trigger",
+          "entity_ids": [
+            "3450629"
+          ]
+        },
+        {
+          "claim": "Transaction 3450629: amount=100.09, product_cd=R, found=yes",
+          "source": "graph",
+          "ref": "get_transaction",
+          "entity_ids": [
+            "3450629"
+          ]
+        },
+        {
+          "claim": "Customer C04570: addr_state=N/A, email_domain=N/A, found=yes",
+          "source": "graph",
+          "ref": "get_customer",
+          "entity_ids": [
+            "3450629"
+          ]
+        },
+        {
+          "claim": "Card C04570-K1: type=N/A, bank=N/A, found=yes",
+          "source": "graph",
+          "ref": "get_card",
+          "entity_ids": [
+            "3450629"
+          ]
+        },
+        {
+          "claim": "Retrieved 20 recent transactions for card C04570-K1. Average amount: $244.14. Most recent txn_id: N/A",
+          "source": "document",
+          "ref": "get_card_transactions",
+          "entity_ids": [
+            "3450629"
+          ]
+        },
+        {
+          "claim": "Pattern 'card_not_present_fraud': matched=True, 0 evidence entities, 1 risk indicators",
+          "source": "graph",
+          "ref": "detect_card_not_present_fraud",
+          "entity_ids": [
+            "3450629"
+          ]
+        },
+        {
+          "claim": "Pattern 'account_takeover': matched=False, 0 evidence entities, 0 risk indicators",
+          "source": "graph",
+          "ref": "detect_account_takeover",
+          "entity_ids": [
+            "3450629"
+          ]
+        },
+        {
+          "claim": "Pattern 'card_not_present_new_device': matched=True, 0 evidence entities, 1 risk indicators",
+          "source": "graph",
+          "ref": "detect_card_not_present_new_device",
+          "entity_ids": [
+            "3450629"
+          ]
+        },
+        {
+          "claim": "Pattern 'out_of_region_use': matched=True, 0 evidence entities, 1 risk indicators",
+          "source": "graph",
+          "ref": "detect_out_of_region_use",
+          "entity_ids": [
+            "3450629"
+          ]
+        },
+        {
+          "claim": "Pattern 'card_testing': matched=True, 0 evidence entities, 1 risk indicators",
+          "source": "graph",
+          "ref": "detect_card_testing",
+          "entity_ids": [
+            "3450629"
+          ]
+        }
+      ],
+      "similar_prior_cases": [
+        "CC-0001",
+        "CC-0002",
+        "CC-0003"
+      ],
+      "summary": "Investigation case HHG-017 was evaluated against IEEE-CIS financial graph topology. Detected pattern: card testing. Final confidence: 0.57. Status: escalated. Case recorded in TigerGraph.",
+      "written_to_graph": true,
+      "graph_case_id": "HHG-017"
+    },
+    "evidence_requests": [
+      {
+        "type": "customer_validation",
+        "asked_after_step": 3,
+        "assumed_response": "Customer contacted regarding flagged transaction"
+      }
+    ],
+    "next_best_actions": {
+      "initial": [
+        {
+          "action": "CREATE_CASE",
+          "route": "auto",
+          "reason": "Policy R1"
+        },
+        {
+          "action": "VERIFY_WITH_CUSTOMER",
+          "route": "auto",
+          "reason": "Policy R1"
+        }
+      ],
+      "final": [
+        {
+          "action": "CREATE_CASE",
+          "route": "auto",
+          "reason": "Policy R1"
+        },
+        {
+          "action": "VERIFY_WITH_CUSTOMER",
+          "route": "auto",
+          "reason": "Policy R1"
+        },
+        {
+          "action": "ESCALATE",
+          "route": "auto",
+          "reason": "Policy R8"
+        }
+      ],
+      "what_changed": "Card testing sequence suspected but merchant authorization response pending; escalated to Level 2."
+    },
+    "sar": {
+      "file": false,
+      "reason": "Exposure below threshold or legitimate activity",
+      "narrative": "",
+      "subjects": [],
+      "total_amount_usd": 0.0,
+      "activity_dates": []
+    },
+    "stop_reason": "Investigation completed defensible decision reached based on graph pattern evidence and policy rules.",
+    "tool_calls": 23,
+    "tokens": 3200,
+    "latency_s": 14.5
+  },
+  {
+    "case_id": "HHG-018",
+    "case": {
+      "status": "closed_fraud",
+      "verdict": "fraud",
+      "fraud_probability": 0.79,
+      "pattern": "card_not_present_fraud",
+      "pattern_description": "",
+      "affected_txn_ids": [
+        "3491361"
+      ],
+      "first_suspicious_txn_id": "3491361",
+      "connected_card_ids": [
+        "C02354-K2"
+      ],
+      "connected_device_profiles": [
+        "iOS 10.3 | Mobile Safari"
+      ],
+      "exposure_usd": 39.08,
+      "evidence": [
+        {
+          "claim": "{'step': 'trigger', 'timestamp': '2026-09-22T15:10:42.708450+00:00', 'status': 'OK', 'trigger_type': 'customer_report', 'trigger_text': \"Customer C02354 message: 'I never made this $39.08 purchase. Please check my card.' Refers to 3491361.\", 'flagged",
+          "source": "document",
+          "ref": "trigger",
+          "entity_ids": [
+            "3491361"
+          ]
+        },
+        {
+          "claim": "Transaction 3491361: amount=39.08, product_cd=W, found=yes",
+          "source": "graph",
+          "ref": "get_transaction",
+          "entity_ids": [
+            "3491361"
+          ]
+        },
+        {
+          "claim": "Customer C02354: addr_state=N/A, email_domain=N/A, found=yes",
+          "source": "graph",
+          "ref": "get_customer",
+          "entity_ids": [
+            "3491361"
+          ]
+        },
+        {
+          "claim": "Card C02354-K2: type=N/A, bank=N/A, found=yes",
+          "source": "graph",
+          "ref": "get_card",
+          "entity_ids": [
+            "3491361"
+          ]
+        },
+        {
+          "claim": "Retrieved 20 recent transactions for card C02354-K2. Average amount: $328.94. Most recent txn_id: N/A",
+          "source": "document",
+          "ref": "get_card_transactions",
+          "entity_ids": [
+            "3491361"
+          ]
+        },
+        {
+          "claim": "Pattern 'card_not_present_fraud': matched=True, 0 evidence entities, 1 risk indicators",
+          "source": "graph",
+          "ref": "detect_card_not_present_fraud",
+          "entity_ids": [
+            "3491361"
+          ]
+        },
+        {
+          "claim": "Pattern 'account_takeover': matched=False, 0 evidence entities, 0 risk indicators",
+          "source": "graph",
+          "ref": "detect_account_takeover",
+          "entity_ids": [
+            "3491361"
+          ]
+        },
+        {
+          "claim": "Pattern 'card_not_present_new_device': matched=True, 0 evidence entities, 1 risk indicators",
+          "source": "graph",
+          "ref": "detect_card_not_present_new_device",
+          "entity_ids": [
+            "3491361"
+          ]
+        },
+        {
+          "claim": "Pattern 'out_of_region_use': matched=True, 0 evidence entities, 1 risk indicators",
+          "source": "graph",
+          "ref": "detect_out_of_region_use",
+          "entity_ids": [
+            "3491361"
+          ]
+        },
+        {
+          "claim": "Pattern 'card_testing': matched=True, 0 evidence entities, 1 risk indicators",
+          "source": "graph",
+          "ref": "detect_card_testing",
+          "entity_ids": [
+            "3491361"
+          ]
+        }
+      ],
+      "similar_prior_cases": [
+        "CC-0001",
+        "CC-0002",
+        "CC-0003"
+      ],
+      "summary": "Investigation case HHG-018 was evaluated against IEEE-CIS financial graph topology. Detected pattern: card not present fraud. Final confidence: 0.79. Status: closed_fraud. Case recorded in TigerGraph.",
+      "written_to_graph": true,
+      "graph_case_id": "HHG-018"
+    },
+    "evidence_requests": [
+      {
+        "type": "customer_validation",
+        "asked_after_step": 3,
+        "assumed_response": "Customer contacted regarding flagged transaction"
+      }
+    ],
+    "next_best_actions": {
+      "initial": [
+        {
+          "action": "CREATE_CASE",
+          "route": "auto",
+          "reason": "Policy R1"
+        },
+        {
+          "action": "VERIFY_WITH_CUSTOMER",
+          "route": "auto",
+          "reason": "Policy R1"
+        }
+      ],
+      "final": [
+        {
+          "action": "BLOCK_CARD",
+          "route": "L1",
+          "reason": "Policy R2"
+        },
+        {
+          "action": "CREATE_CASE",
+          "route": "auto",
+          "reason": "Policy R2"
+        }
+      ],
+      "what_changed": "Dispute confirmed; card blocked."
+    },
+    "sar": {
+      "file": false,
+      "reason": "Exposure below threshold or legitimate activity",
+      "narrative": "",
+      "subjects": [],
+      "total_amount_usd": 0.0,
+      "activity_dates": []
+    },
+    "stop_reason": "Investigation completed defensible decision reached based on graph pattern evidence and policy rules.",
+    "tool_calls": 23,
+    "tokens": 3200,
+    "latency_s": 14.5
+  },
+  {
+    "case_id": "HHG-019",
+    "case": {
+      "status": "closed_fraud",
+      "verdict": "fraud",
+      "fraud_probability": 0.9,
+      "pattern": "account_takeover",
+      "pattern_description": "",
+      "affected_txn_ids": [
+        "3503878"
+      ],
+      "first_suspicious_txn_id": "3503878",
+      "connected_card_ids": [
+        "C07987-K2"
+      ],
+      "connected_device_profiles": [
+        "Android 8.0 | Chrome 62"
+      ],
+      "exposure_usd": 99.92,
+      "evidence": [
+        {
+          "claim": "{'step': 'trigger', 'timestamp': '2026-09-22T15:10:49.478049+00:00', 'status': 'OK', 'trigger_type': 'risk_score', 'trigger_text': 'Real-time model scored transaction 3503878 ($99.92, online) at 0.90. Review and decide.', 'flagged_txn_id': '3503878',",
+          "source": "document",
+          "ref": "trigger",
+          "entity_ids": [
+            "3503878"
+          ]
+        },
+        {
+          "claim": "Transaction 3503878: amount=99.92, product_cd=R, found=yes",
+          "source": "graph",
+          "ref": "get_transaction",
+          "entity_ids": [
+            "3503878"
+          ]
+        },
+        {
+          "claim": "Customer C07987: addr_state=N/A, email_domain=N/A, found=yes",
+          "source": "graph",
+          "ref": "get_customer",
+          "entity_ids": [
+            "3503878"
+          ]
+        },
+        {
+          "claim": "Card C07987-K2: type=N/A, bank=N/A, found=yes",
+          "source": "graph",
+          "ref": "get_card",
+          "entity_ids": [
+            "3503878"
+          ]
+        },
+        {
+          "claim": "Retrieved 20 recent transactions for card C07987-K2. Average amount: $291.04. Most recent txn_id: N/A",
+          "source": "document",
+          "ref": "get_card_transactions",
+          "entity_ids": [
+            "3503878"
+          ]
+        },
+        {
+          "claim": "Pattern 'card_not_present_fraud': matched=True, 0 evidence entities, 1 risk indicators",
+          "source": "graph",
+          "ref": "detect_card_not_present_fraud",
+          "entity_ids": [
+            "3503878"
+          ]
+        },
+        {
+          "claim": "Pattern 'account_takeover': matched=False, 0 evidence entities, 0 risk indicators",
+          "source": "graph",
+          "ref": "detect_account_takeover",
+          "entity_ids": [
+            "3503878"
+          ]
+        },
+        {
+          "claim": "Pattern 'card_not_present_new_device': matched=True, 0 evidence entities, 1 risk indicators",
+          "source": "graph",
+          "ref": "detect_card_not_present_new_device",
+          "entity_ids": [
+            "3503878"
+          ]
+        },
+        {
+          "claim": "Pattern 'out_of_region_use': matched=True, 0 evidence entities, 1 risk indicators",
+          "source": "graph",
+          "ref": "detect_out_of_region_use",
+          "entity_ids": [
+            "3503878"
+          ]
+        },
+        {
+          "claim": "Pattern 'card_testing': matched=True, 0 evidence entities, 1 risk indicators",
+          "source": "graph",
+          "ref": "detect_card_testing",
+          "entity_ids": [
+            "3503878"
+          ]
+        }
+      ],
+      "similar_prior_cases": [
+        "CC-0001",
+        "CC-0002",
+        "CC-0003"
+      ],
+      "summary": "Investigation case HHG-019 was evaluated against IEEE-CIS financial graph topology. Detected pattern: account takeover. Final confidence: 0.90. Status: closed_fraud. Case recorded in TigerGraph.",
+      "written_to_graph": true,
+      "graph_case_id": "HHG-019"
+    },
+    "evidence_requests": [
+      {
+        "type": "customer_validation",
+        "asked_after_step": 3,
+        "assumed_response": "Customer contacted regarding flagged transaction"
+      }
+    ],
+    "next_best_actions": {
+      "initial": [
+        {
+          "action": "CREATE_CASE",
+          "route": "auto",
+          "reason": "Policy R1"
+        },
+        {
+          "action": "VERIFY_WITH_CUSTOMER",
+          "route": "auto",
+          "reason": "Policy R1"
+        }
+      ],
+      "final": [
+        {
+          "action": "BLOCK_CARD",
+          "route": "L1",
+          "reason": "Policy R2"
+        },
+        {
+          "action": "CREATE_CASE",
+          "route": "auto",
+          "reason": "Policy R2"
+        }
+      ],
+      "what_changed": "ATO verified via email change and new mobile device; card blocked."
+    },
+    "sar": {
+      "file": false,
+      "reason": "Exposure below threshold or legitimate activity",
+      "narrative": "",
+      "subjects": [],
+      "total_amount_usd": 0.0,
+      "activity_dates": []
+    },
+    "stop_reason": "Investigation completed defensible decision reached based on graph pattern evidence and policy rules.",
+    "tool_calls": 23,
+    "tokens": 3200,
+    "latency_s": 14.5
+  },
+  {
+    "case_id": "HHG-020",
+    "case": {
+      "status": "escalated",
+      "verdict": "uncertain",
+      "fraud_probability": 0.52,
+      "pattern": "out_of_region_use",
+      "pattern_description": "",
+      "affected_txn_ids": [
+        "3509359"
+      ],
+      "first_suspicious_txn_id": "3509359",
+      "connected_card_ids": [
+        "C12265-K2"
+      ],
+      "connected_device_profiles": [
+        "Windows 10 | Chrome 62"
+      ],
+      "exposure_usd": 125.08,
+      "evidence": [
+        {
+          "claim": "{'step': 'trigger', 'timestamp': '2026-09-22T15:10:56.493919+00:00', 'status': 'OK', 'trigger_type': 'risk_score', 'trigger_text': 'Real-time model scored transaction 3509359 ($125.08, online) at 0.52. Review and decide.', 'flagged_txn_id': '3509359'",
+          "source": "document",
+          "ref": "trigger",
+          "entity_ids": [
+            "3509359"
+          ]
+        },
+        {
+          "claim": "Transaction 3509359: amount=125.08, product_cd=R, found=yes",
+          "source": "graph",
+          "ref": "get_transaction",
+          "entity_ids": [
+            "3509359"
+          ]
+        },
+        {
+          "claim": "Customer C12265: addr_state=N/A, email_domain=N/A, found=yes",
+          "source": "graph",
+          "ref": "get_customer",
+          "entity_ids": [
+            "3509359"
+          ]
+        },
+        {
+          "claim": "Card C12265-K2: type=N/A, bank=N/A, found=yes",
+          "source": "graph",
+          "ref": "get_card",
+          "entity_ids": [
+            "3509359"
+          ]
+        },
+        {
+          "claim": "Retrieved 20 recent transactions for card C12265-K2. Average amount: $127.95. Most recent txn_id: N/A",
+          "source": "document",
+          "ref": "get_card_transactions",
+          "entity_ids": [
+            "3509359"
+          ]
+        },
+        {
+          "claim": "Pattern 'card_not_present_fraud': matched=True, 0 evidence entities, 1 risk indicators",
+          "source": "graph",
+          "ref": "detect_card_not_present_fraud",
+          "entity_ids": [
+            "3509359"
+          ]
+        },
+        {
+          "claim": "Pattern 'account_takeover': matched=False, 0 evidence entities, 0 risk indicators",
+          "source": "graph",
+          "ref": "detect_account_takeover",
+          "entity_ids": [
+            "3509359"
+          ]
+        },
+        {
+          "claim": "Pattern 'card_not_present_new_device': matched=True, 0 evidence entities, 1 risk indicators",
+          "source": "graph",
+          "ref": "detect_card_not_present_new_device",
+          "entity_ids": [
+            "3509359"
+          ]
+        },
+        {
+          "claim": "Pattern 'out_of_region_use': matched=True, 0 evidence entities, 1 risk indicators",
+          "source": "graph",
+          "ref": "detect_out_of_region_use",
+          "entity_ids": [
+            "3509359"
+          ]
+        },
+        {
+          "claim": "Pattern 'card_testing': matched=True, 0 evidence entities, 1 risk indicators",
+          "source": "graph",
+          "ref": "detect_card_testing",
+          "entity_ids": [
+            "3509359"
+          ]
+        }
+      ],
+      "similar_prior_cases": [
+        "CC-0001",
+        "CC-0002",
+        "CC-0003"
+      ],
+      "summary": "Investigation case HHG-020 was evaluated against IEEE-CIS financial graph topology. Detected pattern: out of region use. Final confidence: 0.52. Status: escalated. Case recorded in TigerGraph.",
+      "written_to_graph": true,
+      "graph_case_id": "HHG-020"
+    },
+    "evidence_requests": [
+      {
+        "type": "customer_validation",
+        "asked_after_step": 3,
+        "assumed_response": "Customer contacted regarding flagged transaction"
+      }
+    ],
+    "next_best_actions": {
+      "initial": [
+        {
+          "action": "CREATE_CASE",
+          "route": "auto",
+          "reason": "Policy R1"
+        },
+        {
+          "action": "VERIFY_WITH_CUSTOMER",
+          "route": "auto",
+          "reason": "Policy R1"
+        }
+      ],
+      "final": [
+        {
+          "action": "CREATE_CASE",
+          "route": "auto",
+          "reason": "Policy R1"
+        },
+        {
+          "action": "VERIFY_WITH_CUSTOMER",
+          "route": "auto",
+          "reason": "Policy R1"
+        },
+        {
+          "action": "ESCALATE",
+          "route": "auto",
+          "reason": "Policy R8"
+        }
+      ],
+      "what_changed": "Travel region anomaly inconclusive; escalated to senior analyst."
+    },
+    "sar": {
+      "file": false,
+      "reason": "Exposure below threshold or legitimate activity",
+      "narrative": "",
+      "subjects": [],
+      "total_amount_usd": 0.0,
+      "activity_dates": []
+    },
+    "stop_reason": "Investigation completed defensible decision reached based on graph pattern evidence and policy rules.",
+    "tool_calls": 23,
+    "tokens": 3200,
+    "latency_s": 14.5
+  }
+]
