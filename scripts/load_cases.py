@@ -122,27 +122,33 @@ def _load_env() -> None:
     if not ENV_FILE.exists():
         sys.exit(f"[ERROR] .env not found at {ENV_FILE}")
     load_dotenv(ENV_FILE)
-    required = ["TG_HOST", "TG_GRAPH", "TG_USERNAME", "TG_PASSWORD"]
-    missing = [k for k in required if not os.getenv(k)]
-    if missing:
-        sys.exit(f"[ERROR] Missing env vars: {', '.join(missing)}")
+    if not os.getenv("TG_HOST"):
+        sys.exit("[ERROR] Missing env var: TG_HOST")
+    if not os.getenv("TG_SECRET") and not os.getenv("TG_PASSWORD"):
+        sys.exit("[ERROR] Missing authentication: either TG_SECRET or TG_PASSWORD must be set")
 
 
 def _connect() -> tg.TigerGraphConnection:
     host = os.environ["TG_HOST"].rstrip("/")
-    graph = os.environ["TG_GRAPH"]
-    username = os.environ["TG_USERNAME"]
-    password = os.environ["TG_PASSWORD"]
+    graph = os.environ.get("TG_GRAPH", "FraudInvestigation")
+    username = os.environ.get("TG_USERNAME", "tigergraph")
+    password = os.environ.get("TG_PASSWORD", "")
+    secret = os.environ.get("TG_SECRET", "")
 
     print(f"[INFO] Connecting to TigerGraph at {host}, graph={graph} …")
     try:
         conn = tg.TigerGraphConnection(
             host=host,
             graphname=graph,
-            username=username,
-            password=password,
+            username=username if not secret else None,
+            password=password if not secret else None,
+            gsqlSecret=secret if secret else None,
+            tgCloud=True,
         )
-        conn.getToken(conn.createSecret())
+        if secret:
+            conn.getToken(secret)
+        else:
+            conn.getToken(conn.createSecret())
         print("[INFO] Connected and token obtained.")
         return conn
     except Exception as exc:
@@ -236,7 +242,7 @@ def load_cases() -> None:
     # ------------------------------------------------------------------
     # 1. Upsert FraudPattern vertices
     # ------------------------------------------------------------------
-    print("\n[STEP 1/6] Upserting FraudPattern vertices …")
+    print("\n[STEP 1/6] Upserting FraudPattern vertices ...")
     fp_vertices = [
         (
             fp["pattern_id"],
@@ -244,7 +250,7 @@ def load_cases() -> None:
                 "pattern_id": fp["pattern_id"],
                 "pattern_name": fp["pattern_name"],
                 "description": fp["description"],
-                "pattern_embedding": [],  # filled later by embed_cases.py
+                "gsql_query": f"detect_{fp['pattern_id']}" if not fp['pattern_id'].startswith("detect_") else fp['pattern_id'],
             },
         )
         for fp in FRAUD_PATTERNS
@@ -254,7 +260,7 @@ def load_cases() -> None:
     # ------------------------------------------------------------------
     # 2. Upsert PolicyClause vertices
     # ------------------------------------------------------------------
-    print("[STEP 2/6] Upserting PolicyClause vertices …")
+    print("[STEP 2/6] Upserting PolicyClause vertices ...")
     pc_vertices = [
         (
             pc["clause_id"],
@@ -273,16 +279,16 @@ def load_cases() -> None:
     # ------------------------------------------------------------------
     # 3. Read closed cases CSV
     # ------------------------------------------------------------------
-    print(f"[STEP 3/6] Reading {CASES_CSV} …")
+    print(f"[STEP 3/6] Reading {CASES_CSV} ...")
     if not CASES_CSV.exists():
         sys.exit(f"[ERROR] closed_cases_history.csv not found at {CASES_CSV}")
     df = pd.read_csv(CASES_CSV, low_memory=False)
     print(f"  Loaded {len(df):,} rows, {df.shape[1]} cols")
 
     # ------------------------------------------------------------------
-    # 4. Upsert Case vertices
+    # 4. Upsert Cases vertices
     # ------------------------------------------------------------------
-    print("[STEP 4/6] Upserting Case vertices …")
+    print("[STEP 4/6] Upserting Cases vertices ...")
     case_vertices: list[tuple] = []
     for _, row in df.iterrows():
         case_id = _safe_str(row.get("case_id"))
@@ -292,32 +298,30 @@ def load_cases() -> None:
             case_id,
             {
                 "case_id": case_id,
-                "customer_id": _safe_str(row.get("customer_id")),
-                "card_id": _safe_str(row.get("card_id")),
-                "opened_at": _safe_str(row.get("opened_at")),
-                "closed_at": _safe_str(row.get("closed_at")),
+                "trigger_type": "historical_batch",
+                "trigger_text": f"Historical case {case_id}",
+                "status": "closed",
                 "outcome": _safe_str(row.get("outcome")),
-                "pattern": _safe_str(row.get("pattern")),
-                "first_fraud_txn_id": _safe_str(row.get("first_fraud_txn_id")),
-                "n_txns": _safe_int(row.get("n_txns"), 0),
-                "exposure_usd": _safe_float(row.get("exposure_usd"), 0.0),
-                "connected_card_ids": _safe_str(row.get("connected_card_ids")),
-                "actions_taken": _safe_str(row.get("actions_taken")),
-                "report_filed": bool(_safe_int(row.get("report_filed"), 0)),
-                "analyst_notes": _safe_str(row.get("analyst_notes")),
+                "pattern_matched": _safe_str(row.get("pattern")),
+                "confidence_score": 1.0,
+                "summary_text": _safe_str(row.get("analyst_notes"))[:1024],
                 "summary_embedding": [],  # filled later by embed_cases.py
+                "next_action_before": _safe_str(row.get("actions_taken"))[:1024],
+                "next_action_after": _safe_str(row.get("actions_taken"))[:1024],
+                "exposure_usd": _safe_float(row.get("exposure_usd"), 0.0),
+                "sar_required": 1 if _safe_int(row.get("report_filed"), 0) else 0,
             },
         ))
-    _upsert_vertices_chunked(conn, "Case", case_vertices, "Case")
+    _upsert_vertices_chunked(conn, "Cases", case_vertices, "Cases")
 
     # ------------------------------------------------------------------
     # 5. Build and upsert edges
     # ------------------------------------------------------------------
-    print("[STEP 5/6] Building edges …")
+    print("[STEP 5/6] Building edges ...")
 
-    involved_in_edges: list[tuple] = []  # Customer → Case
-    involves_tx_edges: list[tuple] = []  # Case → Transaction
-    cites_pattern_edges: list[tuple] = []  # Case → FraudPattern
+    involved_in_edges: list[tuple] = []  # Customer -> Cases
+    involves_tx_edges: list[tuple] = []  # Cases -> Transaction
+    cites_pattern_edges: list[tuple] = []  # Cases -> FraudPattern
 
     valid_patterns = {fp["pattern_id"] for fp in FRAUD_PATTERNS}
 
@@ -326,12 +330,12 @@ def load_cases() -> None:
         if not case_id:
             continue
 
-        # INVOLVED_IN: Customer → Case
+        # INVOLVED_IN: Customer -> Cases
         customer_id = _safe_str(row.get("customer_id"))
         if customer_id:
             involved_in_edges.append((customer_id, case_id, {}))
 
-        # INVOLVES_TX: Case → Transaction (for each txn in txn_ids)
+        # INVOLVES_TX: Cases -> Transaction (for each txn in txn_ids)
         txn_ids = _parse_txn_ids(row.get("txn_ids"))
         for tid in txn_ids:
             involves_tx_edges.append((case_id, tid, {}))
@@ -341,7 +345,7 @@ def load_cases() -> None:
         if first_tid and first_tid not in txn_ids:
             involves_tx_edges.append((case_id, first_tid, {}))
 
-        # CITES_PATTERN: Case → FraudPattern
+        # CITES_PATTERN: Cases -> FraudPattern
         pattern_id = _safe_str(row.get("pattern"))
         if pattern_id in valid_patterns:
             cites_pattern_edges.append((case_id, pattern_id, {}))
@@ -350,21 +354,21 @@ def load_cases() -> None:
     print(f"  INVOLVES_TX edges : {len(involves_tx_edges):,}")
     print(f"  CITES_PATTERN edges: {len(cites_pattern_edges):,}")
 
-    print("[STEP 6/6] Upserting edges …")
+    print("[STEP 6/6] Upserting edges ...")
 
-    print("  Upserting INVOLVED_IN (Customer→Case) …")
+    print("  Upserting INVOLVED_IN (Customer->Cases) ...")
     _upsert_edges_chunked(
-        conn, "Customer", "INVOLVED_IN", "Case", involved_in_edges, "INVOLVED_IN"
+        conn, "Customer", "INVOLVED_IN", "Cases", involved_in_edges, "INVOLVED_IN"
     )
 
-    print("  Upserting INVOLVES_TX (Case→Transaction) …")
+    print("  Upserting INVOLVES_TX (Cases->Transaction) ...")
     _upsert_edges_chunked(
-        conn, "Case", "INVOLVES_TX", "Transaction", involves_tx_edges, "INVOLVES_TX"
+        conn, "Cases", "INVOLVES_TX", "Transaction", involves_tx_edges, "INVOLVES_TX"
     )
 
-    print("  Upserting CITES_PATTERN (Case→FraudPattern) …")
+    print("  Upserting CITES_PATTERN (Cases->FraudPattern) ...")
     _upsert_edges_chunked(
-        conn, "Case", "CITES_PATTERN", "FraudPattern", cites_pattern_edges, "CITES_PATTERN"
+        conn, "Cases", "CITES_PATTERN", "FraudPattern", cites_pattern_edges, "CITES_PATTERN"
     )
 
     # ------------------------------------------------------------------

@@ -25,8 +25,8 @@
 USE GRAPH FraudInvestigation
 
 CREATE OR REPLACE QUERY find_similar_cases(
-    LIST<DOUBLE> query_embedding, -- query vector (must be 768-dim)
-    INT          top_k            -- number of top results to return
+    LIST<DOUBLE> query_embedding,
+    INT          top_k
 ) FOR GRAPH FraudInvestigation
   SYNTAX V2
 {
@@ -70,7 +70,7 @@ CREATE OR REPLACE QUERY find_similar_cases(
     // -----------------------------------------------------------------------
     // Step 1 — Scan all Case vertices, compute cosine similarity inline
     // -----------------------------------------------------------------------
-    AllCases = {Case.*};
+    AllCases = {Cases.*};
 
     _ = SELECT c
         FROM AllCases:c

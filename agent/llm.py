@@ -1,9 +1,8 @@
 """
 agent/llm.py
 ------------
-Centralized Gemini client with automatic rate-limit (HTTP 429) backoff, retry,
-and local disk caching. Designed specifically for reliable execution under
-API rate limits.
+Centralized Gemini client with disk caching, automatic failover across
+distinct model quota pools, REST transport, and fast timeout protection.
 """
 
 import hashlib
@@ -11,7 +10,6 @@ import json
 import logging
 import os
 from pathlib import Path
-import re
 import time
 from typing import Any
 
@@ -51,55 +49,46 @@ def _save_cache(cache: dict[str, str]) -> None:
         logger.warning("Failed to save LLM cache: %s", exc)
 
 
-genai.configure(api_key=os.environ["GOOGLE_API_KEY"])
-_MODEL_NAME = os.environ.get("GEMINI_MODEL", "gemini-3.6-flash")
-_model = genai.GenerativeModel(_MODEL_NAME)
+# Use REST transport to avoid gRPC exponential retry stalls
+genai.configure(api_key=os.environ["GOOGLE_API_KEY"], transport="rest")
+
+# Active candidate models in fallback order
+_MODEL_CANDIDATES = [
+    "gemini-3-flash-preview",
+    "gemini-flash-latest",
+    "gemini-3.6-flash",
+    "gemini-3.8-flash",
+    "gemma-4-26b-a4b-it",
+]
 
 
-def generate_content_with_retry(prompt: str, max_retries: int = 3, default_delay: float = 15.0) -> str:
+def generate_content_with_retry(prompt: str, max_retries: int = 1, default_delay: float = 0.5) -> str:
     """
-    Call Gemini generate_content with disk caching and automatic backoff on 429.
+    Call Gemini generate_content with disk caching and fast failover across model pools.
     """
-    prompt_hash = hashlib.sha256(prompt.strip().encode("utf-8")).hexdigest()
+    import re
+    normalized_prompt = re.sub(r"\d{4}-\d{2}-\d{2}[T\s]\d{2}:\d{2}:\d{2}(?:\.\d+)?Z?", "<TS>", prompt)
+    prompt_hash = hashlib.sha256(normalized_prompt.strip().encode("utf-8")).hexdigest()
     cache = _get_cache()
     if prompt_hash in cache:
-        logger.info("[LLM cache hit] Returning cached response for prompt %s...", prompt_hash[:8])
+        logger.info("[LLM cache hit] Returning cached response for %s", prompt_hash[:8])
         return cache[prompt_hash]
 
-    for attempt in range(max_retries + 1):
+    last_exc = None
+    for model_name in _MODEL_CANDIDATES:
         try:
-            response = _model.generate_content(prompt)
+            m = genai.GenerativeModel(model_name)
+            response = m.generate_content(prompt, request_options={"timeout": 4})
             if response and response.text:
                 text = response.text.strip()
                 cache[prompt_hash] = text
                 _save_cache(cache)
                 return text
-            return ""
         except Exception as exc:
-            exc_str = str(exc)
-            if "PerDay" in exc_str:
-                logger.warning("[LLM daily quota] Daily limit reached on this free key. Falling back to policy rules.")
-                raise RuntimeError("Daily Gemini Free Tier quota reached") from exc
+            last_exc = exc
+            # Rate limited, 404, 503, or timeout -> immediately try next model candidate
+            continue
 
-            if "429" in exc_str or "ResourceExhausted" in exc_str or "quota" in exc_str.lower():
-                delay = default_delay
-                match = re.search(r"retry in (\d+(?:\.\d+)?)s", exc_str, re.IGNORECASE)
-                if match:
-                    delay = float(match.group(1)) + 1.0
-                else:
-                    delay_match = re.search(r"seconds:\s*(\d+)", exc_str)
-                    if delay_match:
-                        delay = float(delay_match.group(1)) + 1.0
-                    else:
-                        delay = default_delay * (attempt + 1)
-
-                logger.warning(
-                    "[LLM rate limit] Hit 429 quota. Waiting %.1fs before attempt %d/%d...",
-                    delay, attempt + 1, max_retries
-                )
-                time.sleep(delay)
-            else:
-                logger.error("[LLM error] %s", exc)
-                raise exc
-
-    raise RuntimeError(f"Exceeded max retries ({max_retries}) on Gemini generate_content")
+    if last_exc:
+        raise last_exc
+    return ""

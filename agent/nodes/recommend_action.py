@@ -30,8 +30,7 @@ load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), "..", "..", ".en
 
 logger = logging.getLogger(__name__)
 
-genai.configure(api_key=os.environ["GOOGLE_API_KEY"])
-_MODEL = genai.GenerativeModel("gemini-3.6-flash")
+
 
 # Actions that require a human sign-off before execution
 _HIGH_SEVERITY_ACTIONS = {"BLOCK_CARD", "FILE_REPORT", "ESCALATE"}
@@ -114,13 +113,21 @@ def recommend_action_node(state: CaseState) -> CaseState:
 
     llm_raw = ""
     parsed: dict[str, Any] = {}
+    print(f"\n[recommend_action_node] --- RAW GEMINI PROMPT SENT ---\n{prompt}\n--- END PROMPT ---\n")
+    logger.info("[recommend_action_node] Prompt sent:\n%s", prompt)
     try:
         from agent.llm import generate_content_with_retry
         llm_raw = generate_content_with_retry(prompt)
+        print(f"\n[recommend_action_node] --- RAW GEMINI TEXT RESPONSE ---\n{llm_raw}\n--- END RESPONSE ---\n")
+        logger.info("[recommend_action_node] Raw response:\n%s", llm_raw)
         parsed = _parse_json(llm_raw)
+        print(f"[recommend_action_node] _parse_json status: {'SUCCESS' if (parsed and 'recommended_actions' in parsed) else 'FELL BACK TO DEFAULT'}, parsed: {parsed}\n")
+        logger.info("[recommend_action_node] _parse_json status: %s", "SUCCESS" if (parsed and "recommended_actions" in parsed) else "FELL BACK TO DEFAULT")
     except Exception as exc:
+        print(f"[recommend_action_node] Gemini call exception: {exc}")
         logger.error("[recommend_action_node] LLM call failed: %s", exc)
         parsed = _heuristic_recommendation(pattern_matches, confidence, estimated_exposure)
+        print(f"[recommend_action_node] Fallback heuristic actions: {parsed.get('recommended_actions')}\n")
 
     # ── Extract fields ────────────────────────────────────────────────────
     recommended_actions: list[str] = parsed.get("recommended_actions", [])
@@ -177,15 +184,19 @@ def recommend_action_node(state: CaseState) -> CaseState:
         }
     )
 
-    # ── Derive outcome and pattern_matched ────────────────────────────────
+    # ── Derive outcome, status, and pattern_matched ──────────────────────
     if "CLOSE_NO_FRAUD" in recommended_actions:
         outcome = "cleared"
+        status = "closed"
     elif "BLOCK_CARD" in recommended_actions or "FILE_REPORT" in recommended_actions or confidence >= 0.7:
         outcome = "confirmed_fraud"
+        status = "closed"
     elif "ESCALATE" in recommended_actions:
         outcome = "escalated"
+        status = "escalated"
     else:
-        outcome = "investigating"
+        outcome = "cleared" if confidence < 0.3 else "investigating"
+        status = "closed" if confidence < 0.3 else "open"
 
     matched_pats = [pm["pattern_id"] for pm in pattern_matches if pm.get("matched")]
     pattern_matched = matched_pats[0] if matched_pats else "none"
@@ -197,6 +208,7 @@ def recommend_action_node(state: CaseState) -> CaseState:
     updated["exposure_usd"] = exposure_usd
     updated["next_action_after"] = next_action_after
     updated["outcome"] = outcome
+    updated["status"] = status
     updated["pattern_matched"] = pattern_matched
     updated["evidence"] = evidence
 
@@ -224,7 +236,7 @@ def _summarise_patterns(pattern_matches: list[dict]) -> str:
     for pm in pattern_matches:
         if pm.get("matched"):
             indicators = "; ".join(str(i) for i in pm.get("risk_indicators", [])[:3])
-            lines.append(f"  ✓ {pm['pattern_id']}: {indicators}")
+            lines.append(f"  [MATCHED] {pm['pattern_id']}: {indicators}")
     return "\n".join(lines)
 
 

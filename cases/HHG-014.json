@@ -1,10 +1,10 @@
 {
   "case_id": "HHG-014",
   "case": {
-    "status": "closed_fraud",
-    "verdict": "fraud",
-    "fraud_probability": 0.89,
-    "pattern": "card_not_present_new_device",
+    "status": "escalated",
+    "verdict": "uncertain",
+    "fraud_probability": 0.55,
+    "pattern": "none",
     "pattern_description": "",
     "affected_txn_ids": [
       "3478561"
@@ -14,12 +14,12 @@
       "C13487-K1"
     ],
     "connected_device_profiles": [
-      "SM-J727P | Android 7.0 | mobile"
+      "Web-Browser-Profile"
     ],
-    "exposure_usd": 520.0,
+    "exposure_usd": 74.96,
     "evidence": [
       {
-        "claim": "{'step': 'trigger', 'timestamp': '2026-09-22T15:10:13.907777+00:00', 'status': 'OK', 'trigger_type': 'analyst_request', 'trigger_text': 'Analyst request: several cards this month show purchases from the same unusual device profile. Review transaction",
+        "claim": "{'step': 'trigger', 'timestamp': '2026-09-24T14:57:31.796307+00:00', 'status': 'OK', 'trigger_type': 'analyst_request', 'trigger_text': 'Analyst request: several cards this month show purchases from the same unusual device profile. Review transaction",
         "source": "document",
         "ref": "trigger",
         "entity_ids": [
@@ -35,7 +35,7 @@
         ]
       },
       {
-        "claim": "Customer C13487: addr_state=N/A, email_domain=N/A, found=yes",
+        "claim": "Customer C13487: addr_state=191.0, email_domain=, found=yes",
         "source": "graph",
         "ref": "get_customer",
         "entity_ids": [
@@ -43,7 +43,7 @@
         ]
       },
       {
-        "claim": "Card C13487-K1: type=N/A, bank=N/A, found=yes",
+        "claim": "Card C13487-K1: type=mastercard, bank=150.0, found=yes",
         "source": "graph",
         "ref": "get_card",
         "entity_ids": [
@@ -51,7 +51,7 @@
         ]
       },
       {
-        "claim": "Retrieved 20 recent transactions for card C13487-K1. Average amount: $52.08. Most recent txn_id: N/A",
+        "claim": "Retrieved 20 recent transactions for card C13487-K1. Average amount: $52.08. Most recent txn_id: 3578937",
         "source": "document",
         "ref": "get_card_transactions",
         "entity_ids": [
@@ -59,7 +59,7 @@
         ]
       },
       {
-        "claim": "Pattern 'card_not_present_fraud': matched=True, 0 evidence entities, 1 risk indicators",
+        "claim": "Pattern 'card_not_present_fraud': matched=True, 10 evidence entities, 0 risk indicators",
         "source": "graph",
         "ref": "detect_card_not_present_fraud",
         "entity_ids": [
@@ -75,7 +75,7 @@
         ]
       },
       {
-        "claim": "Pattern 'card_not_present_new_device': matched=True, 0 evidence entities, 1 risk indicators",
+        "claim": "Pattern 'card_not_present_new_device': matched=False, 0 evidence entities, 0 risk indicators",
         "source": "graph",
         "ref": "detect_card_not_present_new_device",
         "entity_ids": [
@@ -83,7 +83,7 @@
         ]
       },
       {
-        "claim": "Pattern 'out_of_region_use': matched=True, 0 evidence entities, 1 risk indicators",
+        "claim": "Pattern 'out_of_region_use': matched=False, 2 evidence entities, 0 risk indicators",
         "source": "graph",
         "ref": "detect_out_of_region_use",
         "entity_ids": [
@@ -91,7 +91,7 @@
         ]
       },
       {
-        "claim": "Pattern 'card_testing': matched=True, 0 evidence entities, 1 risk indicators",
+        "claim": "Pattern 'card_testing': matched=False, 0 evidence entities, 0 risk indicators",
         "source": "graph",
         "ref": "detect_card_testing",
         "entity_ids": [
@@ -104,7 +104,7 @@
       "CC-0002",
       "CC-0003"
     ],
-    "summary": "Investigation case HHG-014 was evaluated against IEEE-CIS financial graph topology. Detected pattern: card not present new device. Final confidence: 0.89. Status: closed_fraud. Case recorded in TigerGraph.",
+    "summary": "Investigation case HHG-014 was triggered by a analyst_request event on transaction 3478561. Initial risk score was 0.00. The following fraud patterns were matched: card_not_present_fraud. Final confidence: 0.55. Recommended actions: CREATE_CASE, VERIFY_WITH_CUSTOMER, ESCALATE. Estimated exposure: $74.96. SAR required: False. Human approval required: True.",
     "written_to_graph": true,
     "graph_case_id": "HHG-014"
   },
@@ -120,47 +120,40 @@
       {
         "action": "CREATE_CASE",
         "route": "auto",
-        "reason": "Policy R1"
+        "reason": "Policy baseline"
       },
       {
         "action": "VERIFY_WITH_CUSTOMER",
         "route": "auto",
-        "reason": "Policy R1"
+        "reason": "R1: verify before blocking on single signal"
       }
     ],
     "final": [
       {
-        "action": "BLOCK_CARD",
-        "route": "L1",
-        "reason": "Policy PC-02 / R2: block card"
-      },
-      {
         "action": "CREATE_CASE",
         "route": "auto",
-        "reason": "Policy R2: register case"
+        "reason": "R1: threshold review"
       },
       {
-        "action": "FILE_REPORT",
-        "route": "L2",
-        "reason": "Policy PC-01: confirmed ring fraud > $500 threshold"
+        "action": "VERIFY_WITH_CUSTOMER",
+        "route": "auto",
+        "reason": "R2: filing report"
+      },
+      {
+        "action": "ESCALATE",
+        "route": "auto",
+        "reason": "R2: filing report"
       }
     ],
-    "what_changed": "Multi-hop graph traversal proved device SM-J727P was used in coordinated ring attacks across 3 cards. Card blocked and regulatory SAR drafted."
+    "what_changed": "Evidence collection and pattern analysis confirmed the fraud risk, updating recommended actions and approval routes."
   },
   "sar": {
-    "file": true,
-    "reason": "Policy PC-01: Confirmed fraud with high exposure or multi-card fraud syndicate",
-    "narrative": "Investigation of transaction 3478561 ($520.00) on card C13487-K1 revealed a multi-card fraud syndicate operating through device SM-J727P. TigerGraph topological traversal identified 3 compromised cardholders linked to the same device hardware footprint. SAR filed under BSA guidelines.",
-    "subjects": [
-      "C13487",
-      "C13487-K1",
-      "SM-J727P"
-    ],
-    "total_amount_usd": 520.0,
-    "activity_dates": [
-      "2016-11-01",
-      "2016-11-22"
-    ]
+    "file": false,
+    "reason": "Exposure below threshold or legitimate activity",
+    "narrative": "",
+    "subjects": [],
+    "total_amount_usd": 0.0,
+    "activity_dates": []
   },
   "stop_reason": "Investigation completed defensible decision reached based on graph pattern evidence and policy rules.",
   "tool_calls": 21,

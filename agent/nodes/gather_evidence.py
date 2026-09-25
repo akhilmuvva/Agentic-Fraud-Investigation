@@ -47,13 +47,17 @@ _PATTERN_QUERIES: list[tuple[str, str, Any]] = [
         "detect_out_of_region_use",
         lambda s: {
             "card_id": s.get("card_id", ""),
-            "transaction_id": s.get("flagged_txn_id", ""),
+            "transaction_id": (
+                str(int(float(s["flagged_txn_id"])))
+                if s.get("flagged_txn_id") and str(s.get("flagged_txn_id")).replace(".", "", 1).isdigit()
+                else str(s.get("flagged_txn_id", ""))
+            ),
         },
     ),
     (
         "card_testing",
         "detect_card_testing",
-        lambda s: {"card_id": s.get("card_id", ""), "window_hours": 24},
+        lambda s: {"card_id": s.get("card_id", ""), "window_hours": 720},
     ),
 ]
 
@@ -272,23 +276,46 @@ def _parse_pattern_result(
 
     evidence_entities: list[Any] = []
     risk_indicators: list[str] = []
-    matched = False
+    explicit_match: bool | None = None
 
     for block in raw_results:
         if not isinstance(block, dict):
             continue
 
-        # Check for explicit boolean flags
-        for flag_key in ("matched", "is_fraud", "flagged", "detected"):
+        # Check for explicit boolean flags from live GSQL queries
+        for flag_key in (
+            "card_testing_pattern_matched",
+            "is_out_of_region",
+            "account_takeover_flagged",
+            "matched",
+            "is_fraud",
+            "flagged",
+            "detected",
+        ):
             if flag_key in block:
                 val = block[flag_key]
                 if val is True or val == 1 or str(val).lower() == "true":
-                    matched = True
+                    explicit_match = True
+                elif val is False or val == 0 or str(val).lower() == "false":
+                    explicit_match = False
                 break
 
-        # Collect entity lists under common key names
-        for entity_key in ("Transactions", "transactions", "Entities", "entities",
-                           "Nodes", "nodes", "result", "vertices"):
+        # Collect entity lists under specific and common key names
+        for entity_key in (
+            "suspicious_transactions",
+            "flagged_cnp_new_device_transactions",
+            "low_value_probe_transactions",
+            "high_value_exploitation_transactions",
+            "historical_addr_distribution",
+            "Transactions",
+            "transactions",
+            "Entities",
+            "entities",
+            "Nodes",
+            "nodes",
+            "result",
+            "vertices",
+        ):
             if entity_key in block and isinstance(block[entity_key], list):
                 evidence_entities.extend(block[entity_key])
 
@@ -297,22 +324,28 @@ def _parse_pattern_result(
             if ri_key in block and isinstance(block[ri_key], list):
                 risk_indicators.extend(str(r) for r in block[ri_key])
 
-        # Fallback: if block has data entries and no explicit match flag, treat as matched
-        if not matched and (evidence_entities or risk_indicators):
-            matched = True
+        # Handle out_of_region_use specific indicators
+        if pattern_id == "out_of_region_use" and block.get("is_out_of_region"):
+            f_addr = block.get("flagged_addr1", "")
+            f_pct = block.get("flagged_addr_historical_frequency_pct", 0.0)
+            if f_addr:
+                risk_indicators.append(
+                    f"Flagged billing region '{f_addr}' has historical frequency of {f_pct:.1f}% (<5.0%)"
+                )
 
-    # If results is non-empty but we found no entities/flags, still mark matched
-    if raw_results and not matched and not evidence_entities:
-        # Check if any block is non-trivially non-empty
-        for block in raw_results:
-            if isinstance(block, dict) and any(
-                v for v in block.values() if v and v != 0 and v != ""
-            ):
-                matched = True
-                break
+    # Determine matched status
+    if explicit_match is not None:
+        matched = explicit_match
+    elif pattern_id in ("card_not_present_fraud", "card_not_present_new_device", "account_takeover"):
+        matched = len(evidence_entities) > 0
+    elif pattern_id in ("card_testing", "out_of_region_use"):
+        matched = False
+    else:
+        matched = len(evidence_entities) > 0
 
-    if matched and not risk_indicators:
-        risk_indicators = [f"Pattern '{pattern_id}' query returned matching data"]
+    # Strict rule: A real match must produce actual evidence_entities or risk_indicators, never neither
+    if matched and not evidence_entities and not risk_indicators:
+        matched = False
 
     return matched, evidence_entities, risk_indicators
 

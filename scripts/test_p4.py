@@ -1,9 +1,15 @@
-// =============================================================================
-// Pattern 4 — Out-of-Region Use
-// Query    : detect_out_of_region_use
-// Graph    : FraudInvestigation
-// =============================================================================
+import os
+from dotenv import load_dotenv
+load_dotenv('D:/hakern/.env')
+import pyTigerGraph as tg
 
+host = os.getenv('TG_HOST')
+graph = os.getenv('TG_GRAPH', 'FraudInvestigation')
+secret = os.getenv('TG_SECRET')
+conn = tg.TigerGraphConnection(host=host, graphname=graph, gsqlSecret=secret, tgCloud=True)
+conn.getToken(secret)
+
+test_p4 = """
 USE GRAPH FraudInvestigation
 
 CREATE OR REPLACE QUERY detect_out_of_region_use(
@@ -64,16 +70,10 @@ CREATE OR REPLACE QUERY detect_out_of_region_use(
 
     DOUBLE total_f = @@total_hist_tx * 1.0;
 
-    IF flagged_addr1 == "" THEN
-        // If flagged transaction has no billing region, we cannot determine an out-of-region anomaly
-        @@anomaly_score = 0.0;
-        @@is_out_of_region = FALSE;
-        @@flagged_freq_pct = 0.0;
-    ELSE IF @@total_hist_tx == 0 THEN
-        // No historical baseline transactions to compare against
-        @@anomaly_score = 0.0;
-        @@is_out_of_region = FALSE;
-        @@flagged_freq_pct = 0.0;
+    IF @@total_hist_tx == 0 THEN
+        @@anomaly_score += 1.0;
+        @@is_out_of_region = TRUE;
+        @@flagged_freq_pct += 0.0;
     ELSE
         FOREACH (addr, cnt) IN @@addr_count_map DO
             DOUBLE pct = (cnt * 100.0) / total_f;
@@ -90,9 +90,6 @@ CREATE OR REPLACE QUERY detect_out_of_region_use(
             @@is_out_of_region = TRUE;
             DOUBLE raw_score = 1.0 - (f_pct / 5.0);
             @@anomaly_score += CASE WHEN raw_score > 1.0 THEN 1.0 ELSE raw_score END;
-        ELSE
-            @@is_out_of_region = FALSE;
-            @@anomaly_score = 0.0;
         END;
     END;
 
@@ -105,5 +102,6 @@ CREATE OR REPLACE QUERY detect_out_of_region_use(
     PRINT @@total_hist_tx       AS historical_transaction_count_90d;
     PRINT @@addr_distribution   AS historical_addr_distribution;
 }
+"""
 
-INSTALL QUERY detect_out_of_region_use
+print(conn.gsql(test_p4))

@@ -202,7 +202,7 @@ def get_card_transactions(card_id: str, limit: int = 50) -> list[dict[str, Any]]
         try:
             result = conn.runInstalledQuery(
                 "get_card_transactions",
-                params={"card_id": card_id, "limit": limit},
+                params={"card_id": card_id, "max_limit": limit},
             )
             txns = []
             for block in result:
@@ -405,13 +405,13 @@ def upsert_case(case_dict: dict[str, Any]) -> bool:
                 "next_action_before": json.dumps(case_dict.get("next_action_before", {}))[:1024],
                 "next_action_after": json.dumps(case_dict.get("next_action_after", {}))[:1024],
             }
-            conn.upsertVertex("Case", case_id, attributes=attrs)
+            conn.upsertVertex("Cases", case_id, attributes=attrs)
 
             # Edges
             pattern = case_dict.get("pattern_matched")
             if pattern:
                 try:
-                    conn.upsertEdge("Case", case_id, "CITES_PATTERN", "FraudPattern", pattern)
+                    conn.upsertEdge("Cases", case_id, "CITES_PATTERN", "FraudPattern", pattern)
                 except Exception:
                     pass
             logger.info("[tg_client] Case %s successfully written to TigerGraph", case_id)
@@ -428,20 +428,9 @@ def find_similar_cases(embedding: list[float], top_k: int = 3) -> list[dict[str,
     """
     Retrieve top_k similar prior cases using cosine similarity or closed cases history.
     """
-    conn = _get_conn()
-    if conn and embedding:
-        try:
-            raw = conn.runInstalledQuery("find_similar_cases", params={"query_embedding": embedding, "top_k": top_k})
-            cases = []
-            for block in raw:
-                for key in ("SimilarCases", "similar_cases", "result"):
-                    if key in block:
-                        for item in block[key]:
-                            cases.append(item.get("attributes", item))
-            if cases:
-                return cases[:top_k]
-        except Exception as exc:
-            logger.warning("TG find_similar_cases query failed: %s", exc)
+    # TigerGraph does not have an installed vector index query for find_similar_cases,
+    # and sending a 3072-element float array via GET query params exceeds URL length limits.
+    # We use the local case records directly.
 
     cache = _load_cache()
     samples = cache.get("closed_cases_sample", [])

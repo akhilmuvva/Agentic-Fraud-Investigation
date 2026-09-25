@@ -1,9 +1,15 @@
-// =============================================================================
-// Pattern 5 — Card Testing
-// Query    : detect_card_testing
-// Graph    : FraudInvestigation
-// =============================================================================
+import os
+from dotenv import load_dotenv
+load_dotenv('D:/hakern/.env')
+import pyTigerGraph as tg
 
+host = os.getenv('TG_HOST')
+graph = os.getenv('TG_GRAPH', 'FraudInvestigation')
+secret = os.getenv('TG_SECRET')
+conn = tg.TigerGraphConnection(host=host, graphname=graph, gsqlSecret=secret, tgCloud=True)
+conn.getToken(secret)
+
+test_p5 = """
 USE GRAPH FraudInvestigation
 
 CREATE OR REPLACE QUERY detect_card_testing(
@@ -110,5 +116,6 @@ CREATE OR REPLACE QUERY detect_card_testing(
     PRINT @@low_value_txns          AS low_value_probe_transactions;
     PRINT @@high_value_txns         AS high_value_exploitation_transactions;
 }
+"""
 
-INSTALL QUERY detect_card_testing
+print(conn.gsql(test_p5))

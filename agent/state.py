@@ -158,6 +158,8 @@ class CaseState(TypedDict, total=False):
     exposure_usd: float
 
     # ── Outputs ───────────────────────────────────────────────────────────
+    status: str
+    outcome: str
     explanation: str
     case_written_to_graph: bool
     error: str
@@ -211,6 +213,8 @@ def default_state(
         requires_human_approval=False,
         sar_required=False,
         exposure_usd=0.0,
+        status="open",
+        outcome="investigating",
         explanation="",
         case_written_to_graph=False,
         error="",

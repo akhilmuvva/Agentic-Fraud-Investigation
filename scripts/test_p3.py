@@ -1,9 +1,15 @@
-// =============================================================================
-// Pattern 3 — Card-Not-Present + New Device
-// Query    : detect_card_not_present_new_device
-// Graph    : FraudInvestigation
-// =============================================================================
+import os
+from dotenv import load_dotenv
+load_dotenv('D:/hakern/.env')
+import pyTigerGraph as tg
 
+host = os.getenv('TG_HOST')
+graph = os.getenv('TG_GRAPH', 'FraudInvestigation')
+secret = os.getenv('TG_SECRET')
+conn = tg.TigerGraphConnection(host=host, graphname=graph, gsqlSecret=secret, tgCloud=True)
+conn.getToken(secret)
+
+test_p3 = """
 USE GRAPH FraudInvestigation
 
 CREATE OR REPLACE QUERY detect_card_not_present_new_device(
@@ -88,5 +94,6 @@ CREATE OR REPLACE QUERY detect_card_not_present_new_device(
     PRINT @@total_new_device    AS flagged_new_device_transactions;
     PRINT @@flagged_results     AS flagged_cnp_new_device_transactions;
 }
+"""
 
-INSTALL QUERY detect_card_not_present_new_device
+print(conn.gsql(test_p3))

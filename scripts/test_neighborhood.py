@@ -1,9 +1,15 @@
-// =============================================================================
-// Utility Query — Suspicious Neighborhood Traversal
-// Query    : get_suspicious_neighborhood
-// Graph    : FraudInvestigation
-// =============================================================================
+import os
+from dotenv import load_dotenv
+load_dotenv('D:/hakern/.env')
+import pyTigerGraph as tg
 
+host = os.getenv('TG_HOST')
+graph = os.getenv('TG_GRAPH', 'FraudInvestigation')
+secret = os.getenv('TG_SECRET')
+conn = tg.TigerGraphConnection(host=host, graphname=graph, gsqlSecret=secret, tgCloud=True)
+conn.getToken(secret)
+
+test_neigh = """
 USE GRAPH FraudInvestigation
 
 CREATE OR REPLACE QUERY get_suspicious_neighborhood(
@@ -127,5 +133,6 @@ CREATE OR REPLACE QUERY get_suspicious_neighborhood(
     PRINT @@entity_count        AS total_entities_in_neighborhood;
     PRINT @@neighborhood        AS neighborhood_entities;
 }
+"""
 
-INSTALL QUERY get_suspicious_neighborhood
+print(conn.gsql(test_neigh))

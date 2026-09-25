@@ -23,8 +23,7 @@ load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), "..", "..", ".en
 
 logger = logging.getLogger(__name__)
 
-genai.configure(api_key=os.environ["GOOGLE_API_KEY"])
-_MODEL = genai.GenerativeModel("gemini-3.6-flash")
+
 
 
 def explain_node(state: CaseState) -> CaseState:

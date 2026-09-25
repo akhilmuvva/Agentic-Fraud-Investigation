@@ -38,31 +38,29 @@ logger = logging.getLogger(__name__)
 
 _EMBED_MODEL = os.environ.get("GEMINI_EMBEDDING_MODEL", "models/gemini-embedding-001")
 
-genai.configure(api_key=os.environ["GOOGLE_API_KEY"])
+genai.configure(api_key=os.environ["GOOGLE_API_KEY"], transport="rest")
+
+
+_embed_cache: dict[str, list[float]] = {}
 
 
 def _embed(text: str) -> list[float]:
     """
     Return a dense embedding vector for *text* using Google text-embedding-004.
-
-    Parameters
-    ----------
-    text : str
-        The text to embed. Truncated to 2 048 characters to stay within
-        the model's token budget.
-
-    Returns
-    -------
-    list[float]
-        768-dimensional embedding vector. Returns an empty list on failure.
     """
+    if not text:
+        return []
+    if text in _embed_cache:
+        return _embed_cache[text]
     try:
         response = genai.embed_content(
             model=_EMBED_MODEL,
             content=text[:2048],
             task_type="RETRIEVAL_QUERY",
         )
-        return response["embedding"]
+        emb = response["embedding"]
+        _embed_cache[text] = emb
+        return emb
     except Exception as exc:
         logger.error("Embedding call failed: %s", exc)
         return []
@@ -129,35 +127,6 @@ def retrieve_relevant_policy(
         logger.warning("retrieve_relevant_policy: embedding failed, returning empty")
         return []
 
-    # First try the installed vector-search query
-    result = tg_client.run_gsql_query(
-        "find_similar_policy_clauses",
-        params={"query_embedding": query_embedding, "top_k": top_k},
-    )
-
-    if not result.get("error") and result.get("results"):
-        clauses: list[dict[str, Any]] = []
-        for block in result["results"]:
-            for key in ("SimilarClauses", "similar_clauses", "result"):
-                if key in block:
-                    for item in block[key]:
-                        attrs = item.get("attributes", item)
-                        clauses.append(
-                            {
-                                "clause_id": attrs.get("clause_id", item.get("v_id", "")),
-                                "clause_text": attrs.get("clause_text", ""),
-                                "action_required": attrs.get("action_required", ""),
-                                "similarity_score": float(
-                                    attrs.get("similarity_score", 0.0)
-                                ),
-                            }
-                        )
-        return sorted(clauses, key=lambda c: c["similarity_score"], reverse=True)[:top_k]
-
-    # Fallback: fetch all clauses and rank locally
-    logger.info(
-        "retrieve_relevant_policy: vector query unavailable, falling back to local ranking"
-    )
     all_clauses = tg_client.get_policy_clauses()
     scored: list[dict[str, Any]] = []
     for clause in all_clauses:

@@ -30,8 +30,7 @@ load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), "..", "..", ".en
 
 logger = logging.getLogger(__name__)
 
-genai.configure(api_key=os.environ["GOOGLE_API_KEY"])
-_MODEL = genai.GenerativeModel("gemini-3.6-flash")
+
 
 # Maximum number of evidence-gathering loops before forcing a decision
 MAX_LOOPS = 2
@@ -107,18 +106,28 @@ def assess_uncertainty_node(state: CaseState) -> CaseState:
     # ── Call Gemini ───────────────────────────────────────────────────────
     llm_response_text = ""
     parsed: dict = {}
+    print(f"\n[assess_uncertainty_node] --- RAW GEMINI PROMPT SENT ---\n{prompt}\n--- END PROMPT ---\n")
+    logger.info("[assess_uncertainty_node] Prompt sent:\n%s", prompt)
     try:
         from agent.llm import generate_content_with_retry
         llm_response_text = generate_content_with_retry(prompt)
+        print(f"\n[assess_uncertainty_node] --- RAW GEMINI TEXT RESPONSE ---\n{llm_response_text}\n--- END RESPONSE ---\n")
+        logger.info("[assess_uncertainty_node] Raw response:\n%s", llm_response_text)
         parsed = _parse_json(llm_response_text)
+        print(f"[assess_uncertainty_node] _parse_json status: {'SUCCESS' if (parsed and 'confidence' in parsed) else 'FELL BACK TO DEFAULT'}, parsed: {parsed}\n")
+        logger.info("[assess_uncertainty_node] _parse_json status: %s", "SUCCESS" if (parsed and "confidence" in parsed) else "FELL BACK TO DEFAULT")
     except Exception as exc:
+        print(f"[assess_uncertainty_node] Gemini call exception: {exc}")
         logger.error("[assess_uncertainty_node] LLM call failed: %s", exc)
+        matched_cnt = sum(1 for pm in pattern_matches if pm.get("matched"))
+        calc_conf = min(0.92, 0.40 + 0.15 * matched_cnt) if matched_cnt > 0 else max(0.10, float(state.get("risk_score", 0.0)))
         parsed = {
-            "confidence": 0.5,
-            "reasoning": f"LLM error: {exc}",
-            "needs_more_evidence": loop_count < MAX_LOOPS,
+            "confidence": round(calc_conf, 2),
+            "reasoning": f"Evidence-based heuristic: {matched_cnt} matched patterns, risk_score={state.get('risk_score', 0.0)}",
+            "needs_more_evidence": loop_count < MAX_LOOPS and matched_cnt == 0,
             "missing_evidence": [],
         }
+        print(f"[assess_uncertainty_node] Fallback computed confidence: {parsed['confidence']}\n")
 
     # ── Enforce loop cap ──────────────────────────────────────────────────
     confidence = float(parsed.get("confidence", 0.5))
@@ -175,11 +184,11 @@ def _summarise_patterns(pattern_matches: list[dict]) -> str:
         f"matched: {matched_count}, not matched: {len(pattern_matches) - matched_count}"
     ]
     for pm in pattern_matches:
-        status = "✓ MATCHED" if pm.get("matched") else "✗ not matched"
+        status = "MATCHED" if pm.get("matched") else "NOT MATCHED"
         indicators = pm.get("risk_indicators", [])
         ind_str = "; ".join(str(i) for i in indicators[:3]) if indicators else "none"
         lines.append(
-            f"  [{status}] {pm.get('pattern_id', 'unknown')} – indicators: {ind_str}"
+            f"  [{status}] {pm.get('pattern_id', 'unknown')} - indicators: {ind_str}"
         )
     return "\n".join(lines)
 

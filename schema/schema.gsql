@@ -76,8 +76,8 @@ CREATE VERTEX Device (
     browser               STRING DEFAULT ""    -- normalised browser name
 ) WITH primary_id_as_attribute="TRUE"
 
-// Case — investigation case record
-CREATE VERTEX Case (
+// Cases — investigation case record
+CREATE VERTEX Cases (
     PRIMARY_ID case_id          STRING,
     trigger_type                STRING DEFAULT "",   -- transaction_id / card_id / customer_id
     trigger_text                STRING DEFAULT "",   -- raw trigger value
@@ -135,22 +135,22 @@ CREATE DIRECTED EDGE FROM_DEVICE (
 
 // Customer is involved in a Case
 CREATE DIRECTED EDGE INVOLVED_IN (
-    FROM Customer, TO Case
+    FROM Customer, TO Cases
 ) WITH REVERSE_EDGE="CASE_INVOLVES_CUSTOMER"
 
 // Case involves a Transaction
 CREATE DIRECTED EDGE INVOLVES_TX (
-    FROM Case, TO Transaction
+    FROM Cases, TO Transaction
 ) WITH REVERSE_EDGE="TX_IN_CASE"
 
 // Case cites a FraudPattern
 CREATE DIRECTED EDGE CITES_PATTERN (
-    FROM Case, TO FraudPattern
+    FROM Cases, TO FraudPattern
 ) WITH REVERSE_EDGE="PATTERN_CITED_BY"
 
 // Case cites a PolicyClause
 CREATE DIRECTED EDGE CITES_CLAUSE (
-    FROM Case, TO PolicyClause
+    FROM Cases, TO PolicyClause
 ) WITH REVERSE_EDGE="CLAUSE_CITED_BY"
 
 // Transaction matched a FraudPattern

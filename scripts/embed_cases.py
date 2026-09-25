@@ -62,28 +62,35 @@ def _load_env() -> None:
     if not ENV_FILE.exists():
         sys.exit(f"[ERROR] .env not found at {ENV_FILE}")
     load_dotenv(ENV_FILE)
-    required_tg = ["TG_HOST", "TG_GRAPH", "TG_USERNAME", "TG_PASSWORD"]
-    required_ai = ["GOOGLE_API_KEY"]
-    missing = [k for k in required_tg + required_ai if not os.getenv(k)]
-    if missing:
-        sys.exit(f"[ERROR] Missing env vars: {', '.join(missing)}")
+    if not os.getenv("TG_HOST"):
+        sys.exit("[ERROR] Missing env var: TG_HOST")
+    if not os.getenv("TG_SECRET") and not os.getenv("TG_PASSWORD"):
+        sys.exit("[ERROR] Missing authentication: either TG_SECRET or TG_PASSWORD must be set")
+    if not os.getenv("GOOGLE_API_KEY"):
+        sys.exit("[ERROR] Missing env var: GOOGLE_API_KEY")
 
 
 def _connect_tg() -> tg.TigerGraphConnection:
     host = os.environ["TG_HOST"].rstrip("/")
-    graph = os.environ["TG_GRAPH"]
-    username = os.environ["TG_USERNAME"]
-    password = os.environ["TG_PASSWORD"]
+    graph = os.environ.get("TG_GRAPH", "FraudInvestigation")
+    username = os.environ.get("TG_USERNAME", "tigergraph")
+    password = os.environ.get("TG_PASSWORD", "")
+    secret = os.environ.get("TG_SECRET", "")
 
     print(f"[INFO] Connecting to TigerGraph at {host}, graph={graph} …")
     try:
         conn = tg.TigerGraphConnection(
             host=host,
             graphname=graph,
-            username=username,
-            password=password,
+            username=username if not secret else None,
+            password=password if not secret else None,
+            gsqlSecret=secret if secret else None,
+            tgCloud=True,
         )
-        conn.getToken(conn.createSecret())
+        if secret:
+            conn.getToken(secret)
+        else:
+            conn.getToken(conn.createSecret())
         print("[INFO] TigerGraph: connected.")
         return conn
     except Exception as exc:
@@ -195,9 +202,9 @@ def _build_case_summary(attrs: dict[str, Any]) -> str:
 
 
 def embed_cases(conn: tg.TigerGraphConnection) -> None:
-    print("\n[CASES] Fetching Case vertices that need embeddings …")
-    cases = _fetch_vertices_needing_embedding(conn, "Case", "summary_embedding")
-    print(f"  Found {len(cases):,} Case vertices to embed.")
+    print("\n[CASES] Fetching Cases vertices that need embeddings …")
+    cases = _fetch_vertices_needing_embedding(conn, "Cases", "summary_embedding")
+    print(f"  Found {len(cases):,} Cases vertices to embed.")
 
     total_done = 0
     for batch_start in range(0, len(cases), BATCH_SIZE):
@@ -219,7 +226,7 @@ def embed_cases(conn: tg.TigerGraphConnection) -> None:
         # Upsert each embedding
         for vid, vector in zip(vertex_ids, vectors):
             if vector:
-                _upsert_embedding(conn, "Case", vid, "summary_embedding", vector)
+                _upsert_embedding(conn, "Cases", vid, "summary_embedding", vector)
 
         total_done += len(batch)
         print(f"  [Cases] {total_done}/{len(cases)} embedded", end="\r")

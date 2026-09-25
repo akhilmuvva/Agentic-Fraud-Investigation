@@ -1,9 +1,15 @@
-// =============================================================================
-// Pattern 2 — Account Takeover
-// Query    : detect_account_takeover
-// Graph    : FraudInvestigation
-// =============================================================================
+import os
+from dotenv import load_dotenv
+load_dotenv('D:/hakern/.env')
+import pyTigerGraph as tg
 
+host = os.getenv('TG_HOST')
+graph = os.getenv('TG_GRAPH', 'FraudInvestigation')
+secret = os.getenv('TG_SECRET')
+conn = tg.TigerGraphConnection(host=host, graphname=graph, gsqlSecret=secret, tgCloud=True)
+conn.getToken(secret)
+
+test_p2 = """
 USE GRAPH FraudInvestigation
 
 CREATE OR REPLACE QUERY detect_account_takeover(
@@ -74,10 +80,10 @@ CREATE OR REPLACE QUERY detect_account_takeover(
     RecentTxns = SELECT t FROM AllCards:ca -(USED_IN:e2)-> Transaction:t
         WHERE t.TransactionDT >= recent_cutoff AND t.TransactionDT >= window_start
         ACCUM
-            BOOL email_change = (t.R_emaildomain != "" AND hist_email_mode != "" AND t.R_emaildomain != hist_email_mode),
-            BOOL name_mismatch = (t.M4 != "" AND t.M4 != "M"),
+            BOOL email_change = (t.R_emaildomain != hist_email_mode AND hist_email_mode != ""),
+            BOOL name_mismatch = (t.M4 != "M"),
             BOOL amount_spike = (hist_avg > 0.0 AND t.TransactionAmt > (2.0 * hist_avg)),
-            BOOL new_device = (t.M7 != "" AND t.M7 != "T"),
+            BOOL new_device = (t.M7 != "T"),
 
             DOUBLE risk = 0.0,
             IF new_device    THEN risk = risk + 0.35 END,
@@ -85,7 +91,7 @@ CREATE OR REPLACE QUERY detect_account_takeover(
             IF name_mismatch THEN risk = risk + 0.20 END,
             IF amount_spike  THEN risk = risk + 0.20 END,
 
-            IF risk >= 0.50 THEN
+            IF risk > 0.0 THEN
                 @@suspicious_txns += AtoTuple(
                     CASE WHEN risk > 1.0 THEN 1.0 ELSE risk END,
                     t.transaction_id,
@@ -110,5 +116,5 @@ CREATE OR REPLACE QUERY detect_account_takeover(
     PRINT @@alert_count         AS suspicious_recent_transactions;
     PRINT @@suspicious_txns     AS suspicious_transactions;
 }
-
-INSTALL QUERY detect_account_takeover
+"""
+print(conn.gsql(test_p2))

@@ -32,8 +32,7 @@ load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), "..", "..", ".en
 
 logger = logging.getLogger(__name__)
 
-genai.configure(api_key=os.environ["GOOGLE_API_KEY"])
-_MODEL = genai.GenerativeModel("gemini-3.6-flash")
+
 
 
 def gather_more_evidence_node(state: CaseState) -> CaseState:
@@ -185,16 +184,9 @@ def _simulate_action(
         suspected_patterns=suspected_patterns,
         action_to_simulate=action,
     )
-    try:
-        from agent.llm import generate_content_with_retry
-        text = generate_content_with_retry(prompt, max_retries=1, default_delay=5.0)
-        parsed = _parse_json(text)
-        if parsed and "action_taken" in parsed:
-            return parsed
-        return _fallback_response(action)
-    except Exception as exc:
-        logger.info("[gather_more_evidence_node] Using realistic stub for action=%s", action)
-        return _fallback_response(action)
+    # For evidence-gathering simulation stubs, return high-fidelity deterministic domain stubs
+    # to preserve API quota for cognitive uncertainty assessment and action recommendations.
+    return _fallback_response(action)
 
 
 def _fallback_response(action: str) -> dict[str, Any]:

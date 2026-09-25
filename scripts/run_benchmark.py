@@ -306,6 +306,8 @@ def main() -> None:
                 f"SAR={'YES' if state.get('sar_required') else 'no'}"
             )
         results.append((case_id_out, state, err))
+        import time
+        time.sleep(0.5)
 
     # --- Final summary table --------------------------------------------------
     print(f"\n{'='*60}")

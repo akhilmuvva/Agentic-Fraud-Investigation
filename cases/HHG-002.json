@@ -3,8 +3,8 @@
   "case": {
     "status": "closed_fraud",
     "verdict": "fraud",
-    "fraud_probability": 0.79,
-    "pattern": "card_not_present_new_device",
+    "fraud_probability": 0.7,
+    "pattern": "none",
     "pattern_description": "",
     "affected_txn_ids": [
       "3478782"
@@ -14,12 +14,12 @@
       "C11891-K1"
     ],
     "connected_device_profiles": [
-      "Windows 10 | Chrome 61.0 | desktop"
+      "Web-Browser-Profile"
     ],
     "exposure_usd": 292.36,
     "evidence": [
       {
-        "claim": "{'step': 'trigger', 'timestamp': '2026-09-22T15:08:45.589125+00:00', 'status': 'OK', 'trigger_type': 'risk_score', 'trigger_text': 'Real-time model scored transaction 3478782 ($292.36, online) at 0.79. Review and decide.', 'flagged_txn_id': '3478782'",
+        "claim": "{'step': 'trigger', 'timestamp': '2026-09-24T14:52:57.573611+00:00', 'status': 'OK', 'trigger_type': 'risk_score', 'trigger_text': 'Real-time model scored transaction 3478782 ($292.36, online) at 0.79. Review and decide.', 'flagged_txn_id': '3478782'",
         "source": "document",
         "ref": "trigger",
         "entity_ids": [
@@ -35,7 +35,7 @@
         ]
       },
       {
-        "claim": "Customer C11891: addr_state=N/A, email_domain=N/A, found=yes",
+        "claim": "Customer C11891: addr_state=, email_domain=hotmail.com, found=yes",
         "source": "graph",
         "ref": "get_customer",
         "entity_ids": [
@@ -43,7 +43,7 @@
         ]
       },
       {
-        "claim": "Card C11891-K1: type=N/A, bank=N/A, found=yes",
+        "claim": "Card C11891-K1: type=mastercard, bank=185.0, found=yes",
         "source": "graph",
         "ref": "get_card",
         "entity_ids": [
@@ -51,7 +51,7 @@
         ]
       },
       {
-        "claim": "Retrieved 20 recent transactions for card C11891-K1. Average amount: $50.09. Most recent txn_id: N/A",
+        "claim": "Retrieved 20 recent transactions for card C11891-K1. Average amount: $50.09. Most recent txn_id: 3545398",
         "source": "document",
         "ref": "get_card_transactions",
         "entity_ids": [
@@ -59,7 +59,7 @@
         ]
       },
       {
-        "claim": "Pattern 'card_not_present_fraud': matched=True, 0 evidence entities, 1 risk indicators",
+        "claim": "Pattern 'card_not_present_fraud': matched=False, 0 evidence entities, 0 risk indicators",
         "source": "graph",
         "ref": "detect_card_not_present_fraud",
         "entity_ids": [
@@ -67,7 +67,7 @@
         ]
       },
       {
-        "claim": "Pattern 'account_takeover': matched=False, 0 evidence entities, 0 risk indicators",
+        "claim": "Pattern 'account_takeover': matched=True, 1 evidence entities, 0 risk indicators",
         "source": "graph",
         "ref": "detect_account_takeover",
         "entity_ids": [
@@ -75,7 +75,7 @@
         ]
       },
       {
-        "claim": "Pattern 'card_not_present_new_device': matched=True, 0 evidence entities, 1 risk indicators",
+        "claim": "Pattern 'card_not_present_new_device': matched=True, 2 evidence entities, 0 risk indicators",
         "source": "graph",
         "ref": "detect_card_not_present_new_device",
         "entity_ids": [
@@ -83,7 +83,7 @@
         ]
       },
       {
-        "claim": "Pattern 'out_of_region_use': matched=True, 0 evidence entities, 1 risk indicators",
+        "claim": "Pattern 'out_of_region_use': matched=False, 0 evidence entities, 0 risk indicators",
         "source": "graph",
         "ref": "detect_out_of_region_use",
         "entity_ids": [
@@ -91,7 +91,7 @@
         ]
       },
       {
-        "claim": "Pattern 'card_testing': matched=True, 0 evidence entities, 1 risk indicators",
+        "claim": "Pattern 'card_testing': matched=False, 1 evidence entities, 0 risk indicators",
         "source": "graph",
         "ref": "detect_card_testing",
         "entity_ids": [
@@ -104,43 +104,42 @@
       "CC-0002",
       "CC-0003"
     ],
-    "summary": "Investigation case HHG-002 was evaluated against IEEE-CIS financial graph topology. Detected pattern: card not present new device. Final confidence: 0.79. Status: closed_fraud. Case recorded in TigerGraph.",
+    "summary": "Investigation case HHG-002 was triggered by a risk_score event on transaction 3478782. Initial risk score was 0.79. The following fraud patterns were matched: account_takeover, card_not_present_new_device. Final confidence: 0.70. Recommended actions: CREATE_CASE, VERIFY_WITH_CUSTOMER, ESCALATE. Estimated exposure: $292.36. SAR required: False. Human approval required: True.",
     "written_to_graph": true,
     "graph_case_id": "HHG-002"
   },
-  "evidence_requests": [
-    {
-      "type": "customer_validation",
-      "asked_after_step": 3,
-      "assumed_response": "Customer contacted regarding flagged transaction"
-    }
-  ],
+  "evidence_requests": [],
   "next_best_actions": {
     "initial": [
       {
         "action": "CREATE_CASE",
         "route": "auto",
-        "reason": "Policy R1"
+        "reason": "Policy baseline"
       },
       {
         "action": "VERIFY_WITH_CUSTOMER",
         "route": "auto",
-        "reason": "Policy R1"
+        "reason": "R1: verify before blocking on single signal"
       }
     ],
     "final": [
       {
-        "action": "BLOCK_CARD",
-        "route": "L1",
-        "reason": "Policy PC-02 / R2: immediate card freeze on confirmed unauthorized fraud"
-      },
-      {
         "action": "CREATE_CASE",
         "route": "auto",
-        "reason": "Policy R2: update forensic case record"
+        "reason": "R1: threshold review"
+      },
+      {
+        "action": "VERIFY_WITH_CUSTOMER",
+        "route": "auto",
+        "reason": "R2: filing report"
+      },
+      {
+        "action": "ESCALATE",
+        "route": "auto",
+        "reason": "R2: filing report"
       }
     ],
-    "what_changed": "First-seen device hardware footprint corroborated unauthorized online order; card blocked immediately per Policy PC-02."
+    "what_changed": "Evidence collection and pattern analysis confirmed the fraud risk, updating recommended actions and approval routes."
   },
   "sar": {
     "file": false,
@@ -151,7 +150,7 @@
     "activity_dates": []
   },
   "stop_reason": "Investigation completed defensible decision reached based on graph pattern evidence and policy rules.",
-  "tool_calls": 23,
+  "tool_calls": 17,
   "tokens": 3200,
   "latency_s": 14.5
 }
